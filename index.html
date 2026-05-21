@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SellBot — Prototype</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.19.0/fonts/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f0f13;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+:root{--sidebar-bg:#0f0f13;--topbar-bg:#fff;--content-bg:#f5f5f7;--card-bg:#fff;--card-border:rgba(0,0,0,0.07);--text-primary:#0f0f13;--text-secondary:#6b6b7b;--accent:#7F77DD;--accent-light:#EEEDFE;--green:#1D9E75;--green-light:#E1F5EE;--amber:#BA7517;--amber-light:#FAEEDA;--red:#E24B4A;--red-light:#FCEBEB}
+.dark-mode{--topbar-bg:#1a1a22;--content-bg:#13131a;--card-bg:#1e1e28;--card-border:rgba(255,255,255,0.07);--text-primary:#f0f0f5;--text-secondary:#8888a0;--accent-light:rgba(127,119,221,0.15);--green-light:rgba(29,158,117,0.15);--amber-light:rgba(186,117,23,0.15);--red-light:rgba(226,75,74,0.15)}
+/* LOGIN */
+.login-wrap{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.login-card{width:100%;background:#1e1e28;border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:2rem}
+.login-input{width:100%;background:#13131a;border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;font-size:13px;color:#fff;outline:none;transition:border-color .2s;font-family:inherit}
+.login-input:focus{border-color:#7F77DD}
+.login-input.error{border-color:#E24B4A}
+.login-btn{width:100%;padding:11px;border-radius:8px;background:#7F77DD;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:500;margin-top:.5rem}
+.login-btn:hover{opacity:.9}
+/* SHELL */
+.shell{display:flex;width:100%;max-width:1100px;height:680px;border-radius:12px;overflow:hidden;border:0.5px solid rgba(255,255,255,0.08);box-shadow:0 24px 80px rgba(0,0,0,0.6)}
+/* SIDEBAR */
+.sidebar{width:210px;background:var(--sidebar-bg);display:flex;flex-direction:column;flex-shrink:0;padding:0 0 1rem}
+.sidebar-logo{padding:1.25rem 1.25rem 1rem;border-bottom:0.5px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px}
+.logo-mark{width:28px;height:28px;background:#7F77DD;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.logo-text{font-size:14px;font-weight:500;color:#fff}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px}
+.nav-section{padding:1rem .75rem .25rem;font-size:10px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:.08em}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 1rem;margin:1px .5rem;border-radius:6px;cursor:pointer;font-size:13px;color:#a0a0b0;transition:background .15s}
+.nav-item:hover{background:rgba(255,255,255,0.05)}
+.nav-item.active{background:rgba(127,119,221,0.2);color:#fff}
+.nav-item.active i{color:#7F77DD}
+.nav-item i{font-size:16px;width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:#7F77DD;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px}
+.sidebar-bottom{margin-top:auto;padding:0 .75rem}
+.user-card{display:flex;align-items:center;gap:10px;padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.05);cursor:pointer}
+.user-av{width:32px;height:32px;border-radius:50%;background:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#fff;flex-shrink:0}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.topbar{background:var(--topbar-bg);border-bottom:0.5px solid var(--card-border);padding:0 1.5rem;height:54px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.btn-primary{padding:7px 14px;border-radius:6px;background:#7F77DD;color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px}
+.btn-secondary{padding:7px 12px;border-radius:6px;background:transparent;color:var(--text-secondary);border:0.5px solid var(--card-border);cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px}
+.btn-danger{padding:7px 12px;border-radius:6px;background:transparent;color:var(--red);border:0.5px solid var(--red-light);cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px}
+.toggle-btn{display:flex;align-items:center;padding:6px 10px;border-radius:6px;border:0.5px solid var(--card-border);background:transparent;cursor:pointer;color:var(--text-secondary)}
+.page{display:none;flex:1;overflow-y:auto;padding:1.25rem;background:var(--content-bg)}
+.page.active{display:block}
+.card{background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:8px;padding:1rem 1.25rem;margin-bottom:1rem}
+.card:last-child{margin-bottom:0}
+.card-title{font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:.875rem;display:flex;align-items:center;gap:7px}
+.card-title i{font-size:15px;color:#7F77DD}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.kpi-card{background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:8px;padding:.875rem 1rem}
+.kpi-label{font-size:11px;color:var(--text-secondary);margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.kpi-value{font-size:22px;font-weight:500;color:var(--text-primary);line-height:1.1}
+.kpi-delta{font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px}
+.delta-up{color:var(--green)}
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.two-col-wide{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:10px;margin-bottom:1.25rem}
+.filters-bar{background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-wrap{flex:1;min-width:140px;display:flex;align-items:center;gap:6px;background:var(--content-bg);border:0.5px solid var(--card-border);border-radius:6px;padding:0 10px}
+.search-wrap i{font-size:14px;color:var(--text-secondary)}
+.search-wrap input{border:none;background:transparent;font-size:12px;color:var(--text-primary);outline:none;padding:6px 0;width:100%}
+.tab-group{display:flex;gap:2px;background:var(--content-bg);border-radius:6px;padding:2px}
+.tab{padding:5px 12px;border-radius:5px;font-size:12px;cursor:pointer;color:var(--text-secondary);border:none;background:transparent}
+.tab.active{background:var(--card-bg);color:var(--text-primary);font-weight:500;border:0.5px solid var(--card-border)}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:500;white-space:nowrap}
+.s-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.s-new{background:var(--accent-light);color:#7F77DD}
+.s-prog{background:var(--amber-light);color:var(--amber)}
+.s-done{background:var(--green-light);color:var(--green)}
+.s-cancel{background:var(--red-light);color:var(--red)}
+.stock-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+.sk-ok{background:var(--green-light);color:var(--green)}
+.sk-low{background:var(--amber-light);color:var(--amber)}
+.sk-out{background:var(--red-light);color:var(--red)}
+.switch{width:36px;height:20px;border-radius:10px;background:var(--card-border);cursor:pointer;position:relative;transition:background .2s;border:none;flex-shrink:0}
+.switch.on{background:#7F77DD}
+.switch::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .2s}
+.switch.on::after{left:19px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--card-border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-name{font-size:12px;color:var(--text-primary);font-weight:500}
+.toggle-desc{font-size:10px;color:var(--text-secondary);margin-top:2px}
+.field-input{width:100%;border:0.5px solid var(--card-border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text-primary);background:var(--content-bg);outline:none;font-family:inherit}
+.field-input:focus{border-color:#7F77DD}
+.field-label{font-size:11px;color:var(--text-secondary);margin-bottom:5px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.detail-panel{position:absolute;right:0;top:0;bottom:0;width:290px;background:var(--card-bg);border-left:0.5px solid var(--card-border);display:none;flex-direction:column;z-index:10}
+.detail-panel.open{display:flex}
+.detail-header{padding:1rem 1.25rem;border-bottom:0.5px solid var(--card-border);display:flex;align-items:center;gap:8px}
+.detail-body{flex:1;overflow-y:auto;padding:1.25rem}
+.detail-footer{padding:1rem 1.25rem;border-top:0.5px solid var(--card-border);display:flex;gap:8px}
+.detail-section{margin-bottom:1rem}
+.detail-label{font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{font-size:10px;color:var(--text-secondary);text-align:left;padding:10px 14px;font-weight:400;text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--card-border)}
+.data-table td{padding:11px 14px;border-bottom:0.5px solid var(--card-border);color:var(--text-primary);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tbody tr{cursor:pointer;transition:background .12s}
+.data-table tbody tr:hover{background:var(--content-bg)}
+.intent-bar-bg{flex:1;height:6px;border-radius:3px;background:var(--card-border);overflow:hidden}
+.intent-bar-fill{height:100%;border-radius:3px}
+.pipeline-step{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;border:0.5px solid var(--card-border);background:var(--content-bg);margin-bottom:6px}
+.step-num{width:22px;height:22px;border-radius:50%;background:#7F77DD;color:#fff;font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tone-card{border:0.5px solid var(--card-border);border-radius:6px;padding:8px 10px;cursor:pointer;transition:border-color .15s,background .15s}
+.tone-card:hover{background:var(--content-bg)}
+.tone-card.selected{border-color:#7F77DD;background:var(--accent-light)}
+.plan-card{border:0.5px solid var(--card-border);border-radius:8px;padding:12px 14px;cursor:pointer}
+.plan-card.current{border-color:#7F77DD;background:var(--accent-light)}
+.settings-nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text-secondary);margin-bottom:2px}
+.settings-nav-item:hover{background:var(--content-bg)}
+.settings-nav-item.active{background:var(--accent-light);color:#7F77DD;font-weight:500}
+.products-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.product-card{background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.product-card:hover{border-color:#7F77DD}
+.product-img{height:80px;display:flex;align-items:center;justify-content:center;font-size:30px;background:var(--content-bg);border-bottom:0.5px solid var(--card-border)}
+.product-body{padding:.75rem}
+.bubble{padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.5;max-width:88%}
+.bubble-ia{background:var(--accent-light);color:var(--text-primary);align-self:flex-start}
+.bubble-client{background:var(--card-bg);border:0.5px solid var(--card-border);color:var(--text-primary);align-self:flex-end}
+.info-banner{background:var(--accent-light);border:0.5px solid rgba(127,119,221,0.25);border-radius:8px;padding:10px 12px;display:flex;gap:8px;align-items:flex-start;margin-bottom:1rem}
+.info-banner p{font-size:11px;color:var(--text-primary);line-height:1.5}
+.range-slider{width:100%;accent-color:#7F77DD}
+.chart-wrap{position:relative;height:160px}
+.msg-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.msg-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0}
+.ai-tag{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--accent-light);color:#7F77DD;margin-left:4px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center}
+.modal-box{background:var(--card-bg);border-radius:12px;width:440px;max-width:95vw;border:0.5px solid var(--card-border);overflow:hidden}
+.modal-header{padding:1rem 1.25rem;border-bottom:0.5px solid var(--card-border);display:flex;align-items:center;gap:8px}
+.modal-body{padding:1.25rem;display:flex;flex-direction:column;gap:10px}
+.modal-footer{padding:.875rem 1.25rem;border-top:0.5px solid var(--card-border);display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginScreen">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo-mark" style="width:36px;height:36px;border-radius:8px"><i class="ti ti-brand-speedtest" style="font-size:18px;color:#fff"></i></div>
+    <div><div style="font-size:18px;font-weight:600;color:#fff">SellBot</div><div style="font-size:11px;color:rgba(255,255,255,0.4)">Assistant IA de vente</div></div>
+  </div>
+  <div class="login-card">
+    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:1.5rem;text-align:center">Connectez-vous a votre tableau de bord</div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px">Nom d'utilisateur</div>
+      <input class="login-input" id="loginUser" type="text" placeholder="Votre identifiant"/>
+    </div>
+    <div style="margin-bottom:.5rem">
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:6px">Mot de passe</div>
+      <div style="position:relative">
+        <input class="login-input" id="loginPass" type="password" placeholder="••••••••"/>
+        <button id="passToggleBtn" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.4)"><i class="ti ti-eye" id="passEyeIcon" style="font-size:16px"></i></button>
+      </div>
+    </div>
+    <div id="loginError" style="font-size:11px;color:#E24B4A;text-align:center;min-height:18px;margin-bottom:4px"></div>
+    <button class="login-btn" id="loginBtn">Se connecter</button>
+  </div>
+  <div style="font-size:11px;color:rgba(255,255,255,0.25)">Prototype SellBot — v0.1</div>
+</div>
+
+<!-- APP -->
+<div class="shell" id="shell" style="display:none">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><i class="ti ti-brand-speedtest" style="font-size:15px;color:#fff"></i></div>
+      <div><div class="logo-text">SellBot</div><div class="logo-sub">Dashboard</div></div>
+    </div>
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" data-page="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+    <div class="nav-item" data-page="messages"><i class="ti ti-message-dots"></i>Messages<span class="nav-badge">24</span></div>
+    <div class="nav-item" data-page="commandes"><i class="ti ti-shopping-cart"></i>Commandes</div>
+    <div class="nav-item" data-page="catalogue"><i class="ti ti-package"></i>Catalogue</div>
+    <div class="nav-section">Analyse</div>
+    <div class="nav-item" data-page="analytics"><i class="ti ti-chart-bar"></i>Analytics</div>
+    <div class="nav-item" data-page="clients"><i class="ti ti-users"></i>Clients</div>
+    <div class="nav-section">Parametres</div>
+    <div class="nav-item" data-page="config"><i class="ti ti-robot"></i>Config IA</div>
+    <div class="nav-item" data-page="settings"><i class="ti ti-settings"></i>Parametres</div>
+    <div class="sidebar-bottom">
+      <div class="user-card">
+        <div class="user-av">KD</div>
+        <div><div style="font-size:12px;color:#fff;font-weight:500">Karim Diallo</div><div style="font-size:10px;color:rgba(255,255,255,0.35)">Plan Pro</div></div>
+        <i class="ti ti-dots-vertical" style="font-size:14px;color:rgba(255,255,255,0.3);margin-left:auto"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="main" id="mainArea">
+    <div class="topbar">
+      <span style="font-size:15px;font-weight:500;color:var(--text-primary);flex:1" id="topbarTitle">Dashboard</span>
+      <span id="iaStatusBadge" style="font-size:11px;color:var(--green);display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block" id="iaDot"></span><span id="iaStatusText">IA active</span></span>
+      <button class="toggle-btn" id="themeToggle"><i class="ti ti-moon" id="themeIcon"></i></button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-currency-euro"></i>Chiffre d'affaires</div><div class="kpi-value" id="dashCA">3 847 EUR</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" style="font-size:12px"></i>+18% vs hier</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-shopping-cart"></i>Commandes</div><div class="kpi-value">47</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" style="font-size:12px"></i>+11 vs hier</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-message-dots"></i>Messages traites</div><div class="kpi-value">312</div><div class="kpi-delta" style="color:var(--text-secondary)"><i class="ti ti-robot" style="font-size:12px"></i>96% par IA</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-percent"></i>Taux de conversion</div><div class="kpi-value">15%</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" style="font-size:12px"></i>+3pt ce mois</div></div>
+      </div>
+      <div class="two-col-wide">
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between"><span><i class="ti ti-chart-bar"></i>Revenus 7 jours</span><span style="font-size:11px;color:#7F77DD;cursor:pointer">Voir details</span></div>
+          <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-target"></i>Intentions detectees</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text-secondary);width:68px">Achat</span><div class="intent-bar-bg"><div class="intent-bar-fill" style="width:62%;background:#7F77DD"></div></div><span style="font-size:12px;font-weight:500;color:var(--text-primary);width:28px;text-align:right">62%</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text-secondary);width:68px">Hesitation</span><div class="intent-bar-bg"><div class="intent-bar-fill" style="width:24%;background:#EF9F27"></div></div><span style="font-size:12px;font-weight:500;color:var(--text-primary);width:28px;text-align:right">24%</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text-secondary);width:68px">Question</span><div class="intent-bar-bg"><div class="intent-bar-fill" style="width:10%;background:#378ADD"></div></div><span style="font-size:12px;font-weight:500;color:var(--text-primary);width:28px;text-align:right">10%</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text-secondary);width:68px">Froid</span><div class="intent-bar-bg"><div class="intent-bar-fill" style="width:4%;background:#888780"></div></div><span style="font-size:12px;font-weight:500;color:var(--text-primary);width:28px;text-align:right">4%</span></div>
+          </div>
+          <div style="display:flex;gap:8px;padding-top:.75rem;border-top:0.5px solid var(--card-border)">
+            <div style="flex:1;text-align:center;padding:6px;background:var(--red-light);border-radius:6px"><div style="font-size:16px;font-weight:500;color:var(--red)">89</div><div style="font-size:9px;color:var(--red)">Chauds</div></div>
+            <div style="flex:1;text-align:center;padding:6px;background:var(--amber-light);border-radius:6px"><div style="font-size:16px;font-weight:500;color:var(--amber)">156</div><div style="font-size:9px;color:var(--amber)">Tiedesdes</div></div>
+            <div style="flex:1;text-align:center;padding:6px;background:#E6F1FB;border-radius:6px"><div style="font-size:16px;font-weight:500;color:#185FA5">67</div><div style="font-size:9px;color:#185FA5">Froids</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between"><span><i class="ti ti-shopping-cart"></i>Commandes recentes</span><span style="font-size:11px;color:#7F77DD;cursor:pointer">Voir tout</span></div>
+          <table class="data-table"><thead><tr><th>Client</th><th>Produit</th><th>Montant</th><th>Statut</th></tr></thead><tbody>
+            <tr><td>Amina B.</td><td style="color:var(--text-secondary)">Sac cuir noir</td><td style="font-weight:500">89</td><td><span class="status-badge s-new"><span class="s-dot"></span>Nouveau</span></td></tr>
+            <tr><td>Mehdi R.</td><td style="color:var(--text-secondary)">Montre doree</td><td style="font-weight:500">145</td><td><span class="status-badge s-prog"><span class="s-dot"></span>En cours</span></td></tr>
+            <tr><td>Sofia L.</td><td style="color:var(--text-secondary)">Sneakers bl.</td><td style="font-weight:500">72</td><td><span class="status-badge s-done"><span class="s-dot"></span>Livre</span></td></tr>
+            <tr><td>Youssef M.</td><td style="color:var(--text-secondary)">Parfum XL</td><td style="font-weight:500">58</td><td><span class="status-badge s-new"><span class="s-dot"></span>Nouveau</span></td></tr>
+          </tbody></table>
+        </div>
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between"><span><i class="ti ti-message-dots"></i>Messages IA en direct</span><span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--green)"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>En ligne</span></div>
+          <div class="msg-row"><div style="width:8px;height:8px;border-radius:50%;background:#E24B4A;flex-shrink:0;margin-top:6px"></div><div class="msg-av" style="background:var(--accent-light);color:#7F77DD">AM</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><span style="font-size:12px;font-weight:500;color:var(--text-primary)">Amir</span><i class="ti ti-brand-instagram" style="font-size:10px;color:#E1306C"></i><span class="ai-tag">IA</span><span style="font-size:10px;color:var(--text-secondary);margin-left:auto">2min</span></div><div style="font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Je vous reserve les 2 paires, livraison demain</div></div></div>
+          <div class="msg-row"><div style="width:8px;height:8px;border-radius:50%;background:#EF9F27;flex-shrink:0;margin-top:6px"></div><div class="msg-av" style="background:var(--green-light);color:var(--green)">NB</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><span style="font-size:12px;font-weight:500;color:var(--text-primary)">Nora</span><i class="ti ti-brand-whatsapp" style="font-size:10px;color:#25D366"></i><span class="ai-tag">IA</span><span style="font-size:10px;color:var(--text-secondary);margin-left:auto">5min</span></div><div style="font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Il reste seulement 3 en stock, -10% aujourd'hui</div></div></div>
+          <div class="msg-row"><div style="width:8px;height:8px;border-radius:50%;background:#E24B4A;flex-shrink:0;margin-top:6px"></div><div class="msg-av" style="background:var(--amber-light);color:var(--amber)">KS</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:4px;margin-bottom:2px"><span style="font-size:12px;font-weight:500;color:var(--text-primary)">Karim</span><i class="ti ti-brand-tiktok" style="font-size:10px"></i><span class="ai-tag">IA</span><span style="font-size:10px;color:var(--text-secondary);margin-left:auto">8min</span></div><div style="font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Commande creee ! Envoyez-moi votre adresse</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="page" id="page-messages">
+      <div class="filters-bar">
+        <div class="search-wrap"><i class="ti ti-search"></i><input type="text" placeholder="Rechercher une conversation..."/></div>
+        <div class="tab-group"><button class="tab active">Tous</button><button class="tab">Chauds</button><button class="tab">Hesitants</button><button class="tab">A traiter</button></div>
+      </div>
+      <div class="two-col" style="height:calc(100% - 70px)">
+        <div class="card" style="overflow-y:auto;padding:.5rem" id="convList"></div>
+        <div class="card" style="display:flex;flex-direction:column;padding:0;overflow:hidden">
+          <div style="padding:.75rem 1rem;border-bottom:0.5px solid var(--card-border);display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-light);color:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500">AM</div>
+            <div><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Amir Mansouri</div><div style="font-size:10px;color:var(--text-secondary)">Instagram · <span style="color:#E24B4A;font-weight:500">Client chaud</span></div></div>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <button class="btn-secondary" style="padding:4px 8px;font-size:11px"><i class="ti ti-robot" style="font-size:12px"></i>IA</button>
+              <button class="btn-primary" style="padding:4px 8px;font-size:11px"><i class="ti ti-user" style="font-size:12px"></i>Manuel</button>
+            </div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:6px;background:var(--content-bg)" id="chatMessages"></div>
+          <div style="padding:.75rem;border-top:0.5px solid var(--card-border);display:flex;gap:6px;background:var(--card-bg)">
+            <input class="field-input" id="msgInput" placeholder="Ecrire un message..."/>
+            <button class="btn-primary" id="msgSend" style="padding:0 12px"><i class="ti ti-send" style="font-size:14px"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMANDES -->
+    <div class="page" id="page-commandes">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-shopping-cart"></i>Total</div><div class="kpi-value">47</div><div style="font-size:11px;color:var(--text-secondary);margin-top:3px">+11 vs hier</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-clock" style="color:#7F77DD"></i>En attente</div><div class="kpi-value" style="color:#7F77DD">18</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-truck" style="color:var(--amber)"></i>En cours</div><div class="kpi-value" style="color:var(--amber)">21</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-circle-check" style="color:var(--green)"></i>Livrees</div><div class="kpi-value" style="color:var(--green)">8</div></div>
+      </div>
+      <div class="filters-bar">
+        <div class="search-wrap"><i class="ti ti-search"></i><input type="text" id="ordersSearch" placeholder="Rechercher..."/></div>
+        <div class="tab-group" id="ordersTabs"><button class="tab active" data-s="all">Toutes</button><button class="tab" data-s="new">Nouveaux</button><button class="tab" data-s="prog">En cours</button><button class="tab" data-s="done">Livrees</button><button class="tab" data-s="cancel">Annulees</button></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="data-table"><thead><tr><th>Client</th><th>Produit</th><th>Montant</th><th>Plateforme</th><th>Statut</th><th>Date</th></tr></thead><tbody id="ordersTableBody"></tbody></table>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:0.5px solid var(--card-border)"><span style="font-size:11px;color:var(--text-secondary)">Affichage 1-9 sur 47</span><div style="display:flex;gap:4px"><button style="padding:4px 9px;border-radius:5px;border:0.5px solid var(--card-border);background:#7F77DD;cursor:pointer;font-size:11px;color:#fff">1</button><button style="padding:4px 9px;border-radius:5px;border:0.5px solid var(--card-border);background:transparent;cursor:pointer;font-size:11px;color:var(--text-secondary)">2</button><button style="padding:4px 9px;border-radius:5px;border:0.5px solid var(--card-border);background:transparent;cursor:pointer;font-size:11px;color:var(--text-secondary)">3</button></div></div>
+      </div>
+    </div>
+
+    <!-- CATALOGUE -->
+    <div class="page" id="page-catalogue">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-package"></i>Total</div><div class="kpi-value" id="kpiTotal">9</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-circle-check" style="color:var(--green)"></i>En stock</div><div class="kpi-value" style="color:var(--green)" id="kpiOk">6</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-alert-triangle" style="color:var(--amber)"></i>Stock faible</div><div class="kpi-value" style="color:var(--amber)" id="kpiLow">3</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-x" style="color:var(--red)"></i>Rupture</div><div class="kpi-value" style="color:var(--red)" id="kpiOut">2</div></div>
+      </div>
+      <div class="filters-bar">
+        <div class="search-wrap"><i class="ti ti-search"></i><input type="text" id="catSearch" placeholder="Rechercher un produit..."/></div>
+        <div class="tab-group" id="catTabs"><button class="tab active" data-s="all">Tous</button><button class="tab" data-s="ok">En stock</button><button class="tab" data-s="low">Stock faible</button><button class="tab" data-s="out">Rupture</button></div>
+        <button class="btn-secondary" id="importProductBtn"><i class="ti ti-upload" style="font-size:13px"></i>Importer</button>
+        <button class="btn-primary" id="addProductBtn"><i class="ti ti-plus" style="font-size:13px"></i>Ajouter produit</button>
+      </div>
+      <div id="catalogGrid"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="page" id="page-analytics">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-currency-euro"></i>CA ce mois</div><div class="kpi-value" id="analyticsCa">24 380</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" style="font-size:12px"></i>+22%</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-robot"></i>Msgs IA</div><div class="kpi-value">8 432</div><div style="font-size:11px;color:var(--text-secondary);margin-top:3px">96% auto</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-percent"></i>Conversion</div><div class="kpi-value">15%</div><div class="kpi-delta delta-up"><i class="ti ti-trending-up" style="font-size:12px"></i>+3pt</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-clock"></i>Tps reponse</div><div class="kpi-value">&lt;2s</div><div style="font-size:11px;color:var(--green);margin-top:3px">Instantane</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card"><div class="card-title"><i class="ti ti-chart-bar"></i>CA 30 jours</div><div class="chart-wrap"><canvas id="analyticsChart"></canvas></div></div>
+        <div class="card"><div class="card-title"><i class="ti ti-topology-star"></i>Par plateforme</div><div class="chart-wrap"><canvas id="platformChart"></canvas></div></div>
+      </div>
+      <div class="two-col" style="margin-top:10px">
+        <div class="card"><div class="card-title"><i class="ti ti-crown"></i>Top produits</div>
+          <table class="data-table"><thead><tr><th>Produit</th><th>Ventes</th><th>CA</th></tr></thead><tbody id="topProductsBody"></tbody></table>
+        </div>
+        <div class="card"><div class="card-title"><i class="ti ti-target"></i>Performance IA</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--text-primary)">Taux de closing IA</span><span style="font-size:12px;font-weight:500;color:#7F77DD">68%</span></div><div style="height:6px;border-radius:3px;background:var(--card-border)"><div style="width:68%;height:100%;border-radius:3px;background:#7F77DD"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--text-primary)">Satisfaction client</span><span style="font-size:12px;font-weight:500;color:var(--green)">94%</span></div><div style="height:6px;border-radius:3px;background:var(--card-border)"><div style="width:94%;height:100%;border-radius:3px;background:var(--green)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--text-primary)">Relances converties</span><span style="font-size:12px;font-weight:500;color:var(--amber)">41%</span></div><div style="height:6px;border-radius:3px;background:var(--card-border)"><div style="width:41%;height:100%;border-radius:3px;background:var(--amber)"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div class="page" id="page-clients">
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-users"></i>Total</div><div class="kpi-value">1 243</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-user-plus"></i>Nouveaux</div><div class="kpi-value" style="color:#7F77DD">38</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-repeat"></i>Recurrents</div><div class="kpi-value" style="color:var(--green)">312</div></div>
+        <div class="kpi-card"><div class="kpi-label"><i class="ti ti-currency-euro"></i>Panier moyen</div><div class="kpi-value" id="panierMoyen">82</div></div>
+      </div>
+      <div class="filters-bar">
+        <div class="search-wrap"><i class="ti ti-search"></i><input type="text" placeholder="Rechercher un client..."/></div>
+        <div class="tab-group"><button class="tab active">Tous</button><button class="tab">Chauds</button><button class="tab">Recurrents</button><button class="tab">Inactifs</button></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="data-table"><thead><tr><th>Client</th><th>Plateforme</th><th>Commandes</th><th>CA total</th><th>Dernier achat</th><th>Segment</th></tr></thead><tbody>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:var(--accent-light);color:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500">AB</div>Amina Benali</div></td><td><i class="ti ti-brand-instagram" style="color:#E1306C"></i></td><td>7</td><td style="font-weight:500;color:#7F77DD">623</td><td style="color:var(--text-secondary)">Auj.</td><td><span class="status-badge s-new">VIP</span></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:var(--green-light);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500">MR</div>Mehdi Rachid</div></td><td><i class="ti ti-brand-whatsapp" style="color:#25D366"></i></td><td>4</td><td style="font-weight:500;color:#7F77DD">388</td><td style="color:var(--text-secondary)">Hier</td><td><span class="status-badge s-prog">Recurrent</span></td></tr>
+          <tr><td><div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:var(--amber-light);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500">SL</div>Sofia Lamine</div></td><td><i class="ti ti-brand-tiktok"></i></td><td>2</td><td style="font-weight:500;color:#7F77DD">144</td><td style="color:var(--text-secondary)">Il y a 3j</td><td><span class="status-badge s-done">Actif</span></td></tr>
+        </tbody></table>
+      </div>
+    </div>
+
+    <!-- CONFIG IA -->
+    <div class="page" id="page-config">
+      <div class="info-banner"><i class="ti ti-info-circle" style="font-size:15px;color:#7F77DD;flex-shrink:0"></i><p>Ecrivez vos scripts <strong>une seule fois</strong>. L'IA les reformule automatiquement selon le ton choisi.</p></div>
+      <div class="two-col">
+        <div>
+          <div class="card">
+            <div class="card-title"><i class="ti ti-mood-smile"></i>Ton de l'IA</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:1rem">
+              <div class="tone-card selected" onclick="selectTone(this)"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Dynamique</div><div style="font-size:10px;color:var(--text-secondary);margin-top:2px">Direct, enthousiaste</div></div>
+              <div class="tone-card" onclick="selectTone(this)"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Professionnel</div><div style="font-size:10px;color:var(--text-secondary);margin-top:2px">Serieux, rassurant</div></div>
+              <div class="tone-card" onclick="selectTone(this)"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Amical</div><div style="font-size:10px;color:var(--text-secondary);margin-top:2px">Chaleureux, naturel</div></div>
+              <div class="tone-card" onclick="selectTone(this)"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Premium</div><div style="font-size:10px;color:var(--text-secondary);margin-top:2px">Elegant, exclusif</div></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;color:var(--text-secondary)">Niveau d'urgence</span><span style="font-size:12px;font-weight:500;color:#7F77DD" id="urgVal">7/10</span></div>
+            <input type="range" class="range-slider" min="1" max="10" value="7" oninput="document.getElementById('urgVal').textContent=this.value+'/10'"/>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="ti ti-toggle-right"></i>Comportements</div>
+            <div class="toggle-row"><div><div class="toggle-name">Commande automatique</div><div class="toggle-desc">Creer si achat detecte</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+            <div class="toggle-row"><div><div class="toggle-name">Relances automatiques</div><div class="toggle-desc">Relancer apres 2h sans reponse</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+            <div class="toggle-row"><div><div class="toggle-name">Urgence stock</div><div class="toggle-desc">Mentionner le stock limite</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+            <div class="toggle-row"><div><div class="toggle-name">Mode nuit</div><div class="toggle-desc">Repondre en silencieux 00h-07h</div></div><button class="switch" onclick="this.classList.toggle('on')"></button></div>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card-title"><i class="ti ti-git-branch"></i>Pipeline</div>
+            <div class="pipeline-step"><div class="step-num">1</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Reception</div><div style="font-size:10px;color:var(--text-secondary)">Capture multi-plateformes</div></div><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">Actif</span></div>
+            <div class="pipeline-step"><div class="step-num">2</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Analyse intention</div><div style="font-size:10px;color:var(--text-secondary)">Chaud / Hesitant / Froid</div></div><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">Actif</span></div>
+            <div class="pipeline-step"><div class="step-num">3</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Selection script</div><div style="font-size:10px;color:var(--text-secondary)">Adapte a l'intention</div></div><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">Actif</span></div>
+            <div class="pipeline-step"><div class="step-num">4</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Reformulation ton</div><div style="font-size:10px;color:var(--text-secondary)">Style choisi applique</div></div><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">Actif</span></div>
+            <div class="pipeline-step"><div class="step-num">5</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Envoi + commande</div><div style="font-size:10px;color:var(--text-secondary)">Reponse + commande si achat</div></div><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--amber-light);color:var(--amber);font-weight:500">Config.</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="ti ti-file-text"></i>Scripts</div>
+            <div style="margin-bottom:8px"><div class="field-label">Client chaud</div><textarea class="field-input" rows="2" style="resize:none">Super choix ! Ce produit part tres vite. Je vous reserve ca maintenant.</textarea></div>
+            <div style="margin-bottom:8px"><div class="field-label">Client hesitant</div><textarea class="field-input" rows="2" style="resize:none">100% de clients satisfaits, remboursement garanti. Zero risque.</textarea></div>
+            <div><div class="field-label">Client froid</div><textarea class="field-input" rows="2" style="resize:none">Bonjour ! Vous cherchez quelque chose en particulier ? Je peux vous aider.</textarea></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARAMETRES -->
+    <div class="page" id="page-settings">
+      <div style="display:flex;height:100%;gap:0">
+        <div style="width:170px;flex-shrink:0;padding:.75rem;border-right:0.5px solid var(--card-border);background:var(--card-bg)" id="settingsNav">
+          <div style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;padding:0 4px">Mon compte</div>
+          <div class="settings-nav-item active" data-sec="profil"><i class="ti ti-user"></i>Profil</div>
+          <div class="settings-nav-item" data-sec="securite"><i class="ti ti-lock"></i>Securite</div>
+          <div class="settings-nav-item" data-sec="notifs"><i class="ti ti-bell"></i>Notifications</div>
+          <div style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px;padding:0 4px">Boutique</div>
+          <div class="settings-nav-item" data-sec="boutique"><i class="ti ti-building-store"></i>Ma boutique</div>
+          <div class="settings-nav-item" data-sec="abo"><i class="ti ti-credit-card"></i>Abonnement</div>
+          <div class="settings-nav-item" data-sec="equipe"><i class="ti ti-users"></i>Equipe</div>
+          <div style="font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px;padding:0 4px">Danger</div>
+          <div class="settings-nav-item" data-sec="danger" style="color:var(--red)"><i class="ti ti-alert-triangle" style="color:var(--red)"></i>Zone critique</div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:1.25rem;background:var(--content-bg)">
+          <div id="sec-profil">
+            <div class="card"><div class="card-title"><i class="ti ti-user"></i>Informations personnelles</div>
+              <div class="field-row"><div><div class="field-label">Prenom</div><input class="field-input" value="Karim"/></div><div><div class="field-label">Nom</div><input class="field-input" value="Diallo"/></div></div>
+              <div class="field-row" style="margin-bottom:0"><div><div class="field-label">Email</div><input class="field-input" value="karim.diallo@email.com"/></div><div><div class="field-label">Telephone</div><input class="field-input" value="+33 6 12 34 56 78"/></div></div>
+            </div>
+            <div class="card"><div class="card-title"><i class="ti ti-world"></i>Preferences</div>
+              <div class="field-row" style="margin-bottom:0"><div><div class="field-label">Langue</div><select class="field-input"><option selected>Francais</option><option>English</option></select></div><div><div class="field-label">Fuseau horaire</div><select class="field-input"><option selected>Europe/Paris (UTC+2)</option></select></div></div>
+            </div>
+          </div>
+          <div id="sec-securite" style="display:none">
+            <div class="card"><div class="card-title"><i class="ti ti-lock"></i>Mot de passe</div>
+              <div style="margin-bottom:8px"><div class="field-label">Mot de passe actuel</div><input class="field-input" type="password" value="••••••••"/></div>
+              <div class="field-row" style="margin-bottom:0"><div><div class="field-label">Nouveau</div><input class="field-input" type="password" placeholder="Min. 8 caracteres"/></div><div><div class="field-label">Confirmer</div><input class="field-input" type="password" placeholder="Repeter"/></div></div>
+            </div>
+            <div class="card"><div class="card-title"><i class="ti ti-shield-check"></i>Double authentification</div>
+              <div class="toggle-row"><div><div class="toggle-name">Activer le 2FA</div><div class="toggle-desc">Via application d'authentification</div></div><button class="switch" onclick="this.classList.toggle('on')"></button></div>
+              <div class="toggle-row"><div><div class="toggle-name">Alertes de connexion</div><div class="toggle-desc">Email a chaque connexion</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+            </div>
+          </div>
+          <div id="sec-notifs" style="display:none">
+            <div class="card"><div class="card-title"><i class="ti ti-bell"></i>Notifications push</div>
+              <div class="toggle-row"><div><div class="toggle-name">Nouvelle commande</div><div class="toggle-desc">Alerte immediate</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+              <div class="toggle-row"><div><div class="toggle-name">Client chaud detecte</div><div class="toggle-desc">Forte intention d'achat</div></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+              <div class="toggle-row"><div><div class="toggle-name">Rapport quotidien</div><div class="toggle-desc">Resume a 20h</div></div><button class="switch" onclick="this.classList.toggle('on')"></button></div>
+            </div>
+          </div>
+          <div id="sec-boutique" style="display:none">
+            <div class="card"><div class="card-title"><i class="ti ti-building-store"></i>Informations boutique</div>
+              <div style="margin-bottom:8px"><div class="field-label">Nom</div><input class="field-input" value="Karim Style Shop"/></div>
+              <div style="margin-bottom:8px"><div class="field-label">Description</div><textarea class="field-input" rows="2" style="resize:none">Vetements et accessoires tendance</textarea></div>
+              <div class="field-row" style="margin-bottom:0">
+                <div><div class="field-label">Devise</div>
+                  <select class="field-input" id="deviseSelect">
+                    <option value="EUR" data-sym="EUR" data-rate="1" selected>EUR - Euro (€)</option>
+                    <option value="USD" data-sym="USD" data-rate="1.08">USD - Dollar ($)</option>
+                    <option value="MAD" data-sym="MAD" data-rate="10.8">MAD - Dirham</option>
+                    <option value="FCFA" data-sym="FCFA" data-rate="655">XOF - Franc CFA</option>
+                  </select>
+                </div>
+                <div><div class="field-label">Pays</div><select class="field-input"><option selected>France</option><option>Maroc</option><option>Cote d'Ivoire</option><option>Senegal</option><option>Belgique</option></select></div>
+              </div>
+            </div>
+            <div class="card"><div class="card-title"><i class="ti ti-link"></i>Lien portfolio</div>
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text-secondary)">sellbot.app/</span><input class="field-input" value="karim-style" style="flex:1"/><button class="btn-secondary" onclick="alert('Copie !')"><i class="ti ti-copy" style="font-size:13px"></i></button></div>
+            </div>
+          </div>
+          <div id="sec-abo" style="display:none">
+            <div class="card"><div class="card-title"><i class="ti ti-credit-card"></i>Plans</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem">
+                <div class="plan-card"><div style="font-size:13px;font-weight:500;color:var(--text-primary)">Starter</div><div style="font-size:16px;font-weight:500;color:#7F77DD"><span class="plan-price-val">19</span> <span class="plan-sym">EUR</span><span style="font-size:10px;color:var(--text-secondary)">/mois</span></div><div style="font-size:10px;color:var(--text-secondary);margin-top:4px">500 messages - 1 plateforme</div></div>
+                <div class="plan-card current"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:500;color:var(--text-primary)">Pro</span><span style="font-size:9px;padding:2px 6px;border-radius:10px;background:#7F77DD;color:#fff">Actuel</span></div><div style="font-size:16px;font-weight:500;color:#7F77DD"><span class="plan-price-val">49</span> <span class="plan-sym">EUR</span><span style="font-size:10px;color:var(--text-secondary)">/mois</span></div><div style="font-size:10px;color:var(--text-secondary);margin-top:4px">5 000 messages - 4 plateformes</div></div>
+                <div class="plan-card"><div style="font-size:13px;font-weight:500;color:var(--text-primary)">Business</div><div style="font-size:16px;font-weight:500;color:#7F77DD"><span class="plan-price-val">99</span> <span class="plan-sym">EUR</span><span style="font-size:10px;color:var(--text-secondary)">/mois</span></div><div style="font-size:10px;color:var(--text-secondary);margin-top:4px">Illimite - Multi-comptes</div></div>
+              </div>
+              <button class="btn-primary" style="width:100%;justify-content:center"><i class="ti ti-rocket" style="font-size:13px"></i>Passer au plan Business</button>
+            </div>
+          </div>
+          <div id="sec-equipe" style="display:none">
+            <div class="card"><div class="card-title"><i class="ti ti-users"></i>Membres</div>
+              <div style="display:flex;flex-direction:column;gap:0">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--card-border)"><div style="width:28px;height:28px;border-radius:50%;background:var(--accent-light);color:#7F77DD;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500">KD</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Karim Diallo</div></div><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--accent-light);color:#7F77DD;font-weight:500">Admin</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--card-border)"><div style="width:28px;height:28px;border-radius:50%;background:var(--amber-light);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500">SB</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Sara Benali</div></div><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--amber-light);color:var(--amber);font-weight:500">Editeur</span></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0"><div style="width:28px;height:28px;border-radius:50%;background:var(--green-light);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500">ML</div><div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Mehdi Larbi</div></div><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">Lecteur</span></div>
+              </div>
+            </div>
+          </div>
+          <div id="sec-danger" style="display:none">
+            <div class="card" style="border-color:rgba(226,75,74,0.2)">
+              <div class="card-title" style="color:var(--red)"><i class="ti ti-alert-triangle" style="color:var(--red)"></i>Zone critique</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--card-border)">
+                <div>
+                  <div style="font-size:12px;font-weight:500;color:var(--text-primary)">Desactiver l'IA temporairement</div>
+                  <div style="font-size:10px;color:var(--text-secondary);margin-top:2px">L'IA arrete de repondre — messages en manuel</div>
+                  <div style="font-size:10px;margin-top:3px" id="iaStatusLabel"><span style="color:var(--green)">● IA active</span></div>
+                </div>
+                <button class="switch on" id="iaToggle"></button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--card-border)"><div><div style="font-size:12px;font-weight:500;color:var(--text-primary)">Exporter mes donnees</div><div style="font-size:10px;color:var(--text-secondary)">CSV commandes, clients, messages</div></div><button class="btn-secondary" onclick="alert('Export en cours...')"><i class="ti ti-download" style="font-size:13px"></i>Exporter</button></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--card-border)"><div><div style="font-size:12px;font-weight:500;color:var(--red)">Reinitialiser les donnees</div><div style="font-size:10px;color:var(--text-secondary)">Supprime tout l'historique. Irreversible.</div></div><button class="btn-danger" onclick="if(confirm('Etes-vous sur ?')) alert('Donnees reinitialisees.')"><i class="ti ti-refresh" style="font-size:13px"></i>Reinitialiser</button></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0"><div><div style="font-size:12px;font-weight:500;color:var(--red)">Supprimer mon compte</div><div style="font-size:10px;color:var(--text-secondary)">Action definitive et irreversible</div></div><button class="btn-danger" onclick="if(confirm('Supprimer definitivement ?')) alert('Compte supprime.')"><i class="ti ti-trash" style="font-size:13px"></i>Supprimer</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAIL PANELS -->
+    <div class="detail-panel" id="orderDetailPanel">
+      <div class="detail-header"><i class="ti ti-receipt" style="font-size:16px;color:#7F77DD"></i><span style="font-size:13px;font-weight:500;color:var(--text-primary);flex:1" id="orderDetailTitle">Commande</span><button style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:16px" onclick="document.getElementById('orderDetailPanel').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+      <div class="detail-body" id="orderDetailBody"></div>
+      <div class="detail-footer"><button class="btn-primary" style="flex:1;justify-content:center" onclick="document.getElementById('orderDetailPanel').classList.remove('open')"><i class="ti ti-check" style="font-size:13px"></i>Sauvegarder</button></div>
+    </div>
+    <div class="detail-panel" id="catDetailPanel">
+      <div class="detail-header"><i class="ti ti-package" style="font-size:16px;color:#7F77DD"></i><span style="font-size:13px;font-weight:500;color:var(--text-primary);flex:1" id="catDetailTitle">Produit</span><button style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:16px" onclick="document.getElementById('catDetailPanel').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+      <div class="detail-body" id="catDetailBody"></div>
+      <div class="detail-footer"><button class="btn-primary" style="flex:1;justify-content:center" onclick="document.getElementById('catDetailPanel').classList.remove('open')"><i class="ti ti-check" style="font-size:13px"></i>Sauvegarder</button><button class="btn-danger" onclick="document.getElementById('catDetailPanel').classList.remove('open')"><i class="ti ti-trash" style="font-size:13px"></i></button></div>
+    </div>
+
+    <!-- MODAL AJOUT PRODUIT -->
+    <div class="modal-overlay" id="addProductModal">
+      <div class="modal-box">
+        <div class="modal-header"><i class="ti ti-package" style="font-size:16px;color:#7F77DD"></i><span style="font-size:13px;font-weight:500;color:var(--text-primary);flex:1">Nouveau produit</span><button onclick="closeAddModal()" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:18px"><i class="ti ti-x"></i></button></div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start">
+            <div><div class="field-label">Emoji</div><input class="field-input" id="newEmoji" value="📦" style="text-align:center;font-size:22px;padding:8px 4px"/></div>
+            <div><div class="field-label">Nom du produit *</div><input class="field-input" id="newName" placeholder="Ex : Sac cuir noir"/></div>
+          </div>
+          <div><div class="field-label">Description</div><textarea class="field-input" id="newDesc" rows="2" style="resize:none" placeholder="Courte description..."></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div><div class="field-label">Categorie</div><input class="field-input" id="newCat" placeholder="Accessoires"/></div>
+            <div><div class="field-label">Prix *</div><input class="field-input" id="newPrice" type="number" min="0" placeholder="0"/></div>
+            <div><div class="field-label">Stock *</div><input class="field-input" id="newStock" type="number" min="0" placeholder="0"/></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:0.5px solid var(--card-border)">
+            <div><div class="toggle-name">Activer immediatement</div><div class="toggle-desc">L'IA pourra proposer ce produit</div></div>
+            <button class="switch on" id="newActive" onclick="this.classList.toggle('on')"></button>
+          </div>
+          <div id="newProductError" style="font-size:11px;color:var(--red);min-height:14px"></div>
+        </div>
+        <div class="modal-footer"><button class="btn-secondary" onclick="closeAddModal()">Annuler</button><button class="btn-primary" onclick="saveNewProduct()"><i class="ti ti-check" style="font-size:13px"></i>Ajouter</button></div>
+      </div>
+    </div>
+
+    <!-- MODAL IMPORT CSV -->
+    <div class="modal-overlay" id="importModal">
+      <div class="modal-box">
+        <div class="modal-header"><i class="ti ti-upload" style="font-size:16px;color:#7F77DD"></i><span style="font-size:13px;font-weight:500;color:var(--text-primary);flex:1">Importer des produits (CSV)</span><button onclick="closeImportModal()" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:18px"><i class="ti ti-x"></i></button></div>
+        <div class="modal-body">
+          <div style="border:2px dashed var(--card-border);border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer" onclick="document.getElementById('csvFileInput').click()">
+            <i class="ti ti-file-spreadsheet" style="font-size:32px;color:#7F77DD;display:block;margin-bottom:8px"></i>
+            <div style="font-size:13px;font-weight:500;color:var(--text-primary)">Glissez votre fichier CSV ici</div>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">ou cliquez pour selectionner</div>
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none"/>
+          </div>
+          <div style="background:var(--content-bg);border-radius:6px;padding:10px 12px">
+            <div style="font-size:11px;font-weight:500;color:var(--text-primary);margin-bottom:6px">Format attendu :</div>
+            <code style="font-size:10px;color:var(--text-secondary);display:block;line-height:1.7">nom,categorie,prix,stock,description</code>
+          </div>
+          <div id="importPreview" style="display:none">
+            <div style="font-size:11px;font-weight:500;color:var(--green);margin-bottom:6px" id="importCount"></div>
+            <div id="importPreviewList" style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+          </div>
+          <div id="importError" style="font-size:11px;color:var(--red);min-height:14px"></div>
+        </div>
+        <div class="modal-footer"><button class="btn-secondary" onclick="closeImportModal()">Annuler</button><button class="btn-primary" id="confirmImportBtn" style="display:none" onclick="confirmImport()"><i class="ti ti-check" style="font-size:13px"></i>Importer</button></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ---- DEVISE ----
+var devises = {
+  EUR: { sym: 'EUR', rate: 1 },
+  USD: { sym: 'USD', rate: 1.08 },
+  MAD: { sym: 'MAD', rate: 10.8 },
+  FCFA: { sym: 'FCFA', rate: 655 }
+};
+var currentDevise = 'EUR';
+function fmtPrice(eur) {
+  var d = devises[currentDevise];
+  return Math.round(eur * d.rate) + ' ' + d.sym;
+}
+function applyDevise() {
+  renderCatalog();
+  updateKpis();
+  var rates = [19, 49, 99];
+  var pv = document.querySelectorAll('.plan-price-val');
+  var ps = document.querySelectorAll('.plan-sym');
+  for (var i = 0; i < pv.length; i++) {
+    pv[i].textContent = Math.round(rates[i] * devises[currentDevise].rate);
+    ps[i].textContent = devises[currentDevise].sym;
+  }
+  document.getElementById('dashCA').textContent = fmtPrice(3847);
+  document.getElementById('analyticsCa').textContent = fmtPrice(24380);
+  document.getElementById('panierMoyen').textContent = fmtPrice(82);
+  renderTopProducts();
+}
+
+// ---- LOGIN ----
+var passVisible = false;
+document.getElementById('passToggleBtn').addEventListener('click', function() {
+  passVisible = !passVisible;
+  document.getElementById('loginPass').type = passVisible ? 'text' : 'password';
+  document.getElementById('passEyeIcon').className = passVisible ? 'ti ti-eye-off' : 'ti ti-eye';
+});
+function doLogin() {
+  var u = document.getElementById('loginUser').value.trim().toLowerCase();
+  var p = document.getElementById('loginPass').value;
+  var err = document.getElementById('loginError');
+  document.getElementById('loginUser').classList.remove('error');
+  document.getElementById('loginPass').classList.remove('error');
+  if (u !== 'karim diallo' || p !== '1234') {
+    err.textContent = 'Identifiant ou mot de passe incorrect.';
+    document.getElementById('loginUser').classList.add('error');
+    document.getElementById('loginPass').classList.add('error');
+    return;
+  }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('shell').style.display = 'flex';
+  setTimeout(initDashboardChart, 100);
+}
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+document.getElementById('loginUser').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+
+// ---- NAVIGATION ----
+var pages = ['dashboard','messages','commandes','catalogue','analytics','clients','config','settings'];
+var pageTitles = { dashboard:'Dashboard', messages:'Messages', commandes:'Commandes', catalogue:'Catalogue produits', analytics:'Analytics', clients:'Clients', config:'Configuration IA', settings:'Parametres' };
+document.querySelectorAll('.nav-item[data-page]').forEach(function(item) {
+  item.addEventListener('click', function() {
+    pages.forEach(function(p) {
+      document.getElementById('page-'+p).classList.toggle('active', p === item.dataset.page);
+      document.querySelector('.nav-item[data-page="'+p+'"]').classList.toggle('active', p === item.dataset.page);
+    });
+    document.getElementById('topbarTitle').textContent = pageTitles[item.dataset.page];
+    document.getElementById('orderDetailPanel').classList.remove('open');
+    document.getElementById('catDetailPanel').classList.remove('open');
+    if (item.dataset.page === 'analytics') setTimeout(initAnalyticsCharts, 50);
+  });
+});
+
+// ---- DARK MODE ----
+var dark = false;
+document.getElementById('themeToggle').addEventListener('click', function() {
+  dark = !dark;
+  document.getElementById('shell').classList.toggle('dark-mode', dark);
+  document.getElementById('mainArea').classList.toggle('dark-mode', dark);
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.toggle('dark-mode', dark); });
+  document.getElementById('themeIcon').className = dark ? 'ti ti-sun' : 'ti ti-moon';
+});
+
+// ---- DASHBOARD CHART ----
+function initDashboardChart() {
+  new Chart(document.getElementById('revenueChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels:['Lun','Mar','Mer','Jeu','Ven','Sam','Auj.'], datasets:[
+      { data:[2800,3100,2600,3400,3900,4200,3847], backgroundColor:'rgba(127,119,221,0.75)', borderRadius:4, order:2 },
+      { type:'line', data:[3000,3000,3000,3000,3000,3000,3000], borderColor:'#1D9E75', borderDash:[4,3], borderWidth:1.5, pointRadius:0, fill:false, order:1 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#6b6b7b',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}}, y:{ticks:{color:'#6b6b7b',font:{size:10},callback:function(v){return v/1000+'k'}},grid:{color:'rgba(0,0,0,0.04)'}} } }
+  });
+}
+
+// ---- MESSAGES ----
+var convs = [
+  { initials:'AM', bg:'var(--accent-light)', tc:'#7F77DD', name:'Amir Mansouri', platform:'Instagram', heat:'hot', last:'Je veux commander les 2 paires', time:'2min' },
+  { initials:'NB', bg:'var(--green-light)', tc:'var(--green)', name:'Nora Benali', platform:'WhatsApp', heat:'warm', last:'C est fiable ce produit ?', time:'5min' },
+  { initials:'KS', bg:'var(--amber-light)', tc:'var(--amber)', name:'Karim Souki', platform:'TikTok', heat:'hot', last:'C est combien la montre ?', time:'8min' },
+  { initials:'SZ', bg:'var(--red-light)', tc:'var(--red)', name:'Sara Zidane', platform:'Facebook', heat:'cold', last:'Vous vendez quoi ?', time:'12min' }
+];
+var heatDot = { hot:'#E24B4A', warm:'#EF9F27', cold:'#378ADD' };
+document.getElementById('convList').innerHTML = convs.map(function(c) {
+  return '<div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:6px;cursor:pointer;border-bottom:0.5px solid var(--card-border)">'
+    + '<div style="width:8px;height:8px;border-radius:50%;background:'+heatDot[c.heat]+';flex-shrink:0"></div>'
+    + '<div style="width:30px;height:30px;border-radius:50%;background:'+c.bg+';color:'+c.tc+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0">'+c.initials+'</div>'
+    + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;color:var(--text-primary)">'+c.name+'</div><div style="font-size:10px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.last+'</div></div>'
+    + '<div style="font-size:10px;color:var(--text-secondary)">'+c.time+'</div></div>';
+}).join('');
+var chatMsgs = [
+  { type:'client', text:'Bonjour, vous avez encore le sac noir en stock ?' },
+  { type:'ia', text:'Bonjour ! Oui disponible, il en reste seulement 3. Je vous en mets un de cote ?' },
+  { type:'client', text:'C est combien ?' },
+  { type:'ia', text:'89 EUR livraison incluse. Je vous reserve ca maintenant, envoyez-moi votre adresse !' }
+];
+document.getElementById('chatMessages').innerHTML = chatMsgs.map(function(m) {
+  return '<div class="bubble ' + (m.type === 'ia' ? 'bubble-ia' : 'bubble-client') + '">' + m.text + '</div>';
+}).join('');
+var chatReplies = ['Super choix ! Je vous reserve ca maintenant !', 'Il reste peu de stock ! Je vous mets ca de cote ?', 'Offre speciale ce soir ! On finalise ?'];
+var chatIdx2 = 0;
+function sendMsg() {
+  var inp = document.getElementById('msgInput');
+  var msg = inp.value.trim();
+  if (!msg) return;
+  var body = document.getElementById('chatMessages');
+  var cb = document.createElement('div'); cb.className = 'bubble bubble-client'; cb.textContent = msg; body.appendChild(cb);
+  inp.value = '';
+  setTimeout(function() {
+    var ib = document.createElement('div'); ib.className = 'bubble bubble-ia'; ib.textContent = chatReplies[chatIdx2 % chatReplies.length]; chatIdx2++; body.appendChild(ib); body.scrollTop = body.scrollHeight;
+  }, 600);
+  body.scrollTop = body.scrollHeight;
+}
+document.getElementById('msgSend').addEventListener('click', sendMsg);
+document.getElementById('msgInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') sendMsg(); });
+
+// ---- ORDERS ----
+var orders = [
+  { id:'#1058', client:'Amina Benali', initials:'AB', bg:'var(--accent-light)', tc:'#7F77DD', product:'Sac cuir noir', amount:89, platform:'instagram', status:'new', date:'Auj. 14:32', source:'ia' },
+  { id:'#1057', client:'Mehdi Rachid', initials:'MR', bg:'var(--green-light)', tc:'var(--green)', product:'Montre doree', amount:145, platform:'whatsapp', status:'prog', date:'Auj. 13:58', source:'ia' },
+  { id:'#1056', client:'Sofia Lamine', initials:'SL', bg:'var(--amber-light)', tc:'var(--amber)', product:'Sneakers blanches', amount:72, platform:'tiktok', status:'done', date:'Auj. 12:11', source:'ia' },
+  { id:'#1055', client:'Youssef Madi', initials:'YM', bg:'var(--accent-light)', tc:'#7F77DD', product:'Parfum XL', amount:58, platform:'facebook', status:'new', date:'Auj. 11:47', source:'ia' },
+  { id:'#1054', client:'Leila Kaci', initials:'LK', bg:'var(--green-light)', tc:'var(--green)', product:'Ensemble sport', amount:94, platform:'instagram', status:'prog', date:'Auj. 10:30', source:'manuel' },
+  { id:'#1053', client:'Karim Souki', initials:'KS', bg:'var(--amber-light)', tc:'var(--amber)', product:'Casquette logo', amount:29, platform:'tiktok', status:'done', date:'Auj. 09:15', source:'ia' },
+  { id:'#1052', client:'Nadia Ziane', initials:'NZ', bg:'var(--red-light)', tc:'var(--red)', product:'Robe fleurie', amount:67, platform:'whatsapp', status:'cancel', date:'Auj. 08:54', source:'ia' },
+  { id:'#1051', client:'Bilal Hamza', initials:'BH', bg:'var(--accent-light)', tc:'#7F77DD', product:'Montre noire', amount:119, platform:'instagram', status:'new', date:'Hier 22:10', source:'ia' },
+  { id:'#1050', client:'Sara Zidane', initials:'SZ', bg:'var(--green-light)', tc:'var(--green)', product:'Sac a dos', amount:54, platform:'facebook', status:'prog', date:'Hier 20:33', source:'manuel' }
+];
+var sMap = { new:{l:'Nouveau',c:'s-new'}, prog:{l:'En cours',c:'s-prog'}, done:{l:'Livre',c:'s-done'}, cancel:{l:'Annule',c:'s-cancel'} };
+var pIcon = { instagram:'ti-brand-instagram', whatsapp:'ti-brand-whatsapp', tiktok:'ti-brand-tiktok', facebook:'ti-brand-facebook' };
+var pColor = { instagram:'#E1306C', whatsapp:'#25D366', tiktok:'var(--text-primary)', facebook:'#1877F2' };
+var orderFilter = 'all';
+function renderOrders() {
+  var q = document.getElementById('ordersSearch').value.toLowerCase();
+  var filtered = orders.filter(function(o) {
+    return (orderFilter === 'all' || o.status === orderFilter) && (!q || o.client.toLowerCase().indexOf(q) >= 0 || o.product.toLowerCase().indexOf(q) >= 0 || o.id.indexOf(q) >= 0);
+  });
+  document.getElementById('ordersTableBody').innerHTML = filtered.map(function(o) {
+    var s = sMap[o.status];
+    return '<tr onclick="openOrderDetail(\'' + o.id + '\')">'
+      + '<td><div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:50%;background:' + o.bg + ';color:' + o.tc + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500">' + o.initials + '</div><div><div style="font-size:12px;font-weight:500;color:var(--text-primary)">' + o.client + '</div><div style="font-size:10px;color:var(--text-secondary)">' + o.id + '</div></div></div></td>'
+      + '<td style="color:var(--text-secondary)">' + o.product + (o.source === 'ia' ? '<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:var(--accent-light);color:#7F77DD;margin-left:4px">IA</span>' : '') + '</td>'
+      + '<td style="font-weight:500">' + fmtPrice(o.amount) + '</td>'
+      + '<td><i class="ti ' + pIcon[o.platform] + '" style="font-size:14px;color:' + pColor[o.platform] + '"></i></td>'
+      + '<td><span class="status-badge ' + s.c + '"><span class="s-dot"></span>' + s.l + '</span></td>'
+      + '<td style="font-size:11px;color:var(--text-secondary)">' + o.date + '</td></tr>';
+  }).join('');
+}
+function openOrderDetail(id) {
+  var o = orders.find(function(x) { return x.id === id; });
+  document.getElementById('orderDetailTitle').textContent = 'Commande ' + o.id;
+  document.getElementById('orderDetailBody').innerHTML = '<div class="detail-section"><div class="detail-label">Client</div><div style="font-size:13px;font-weight:500;color:var(--text-primary)">' + o.client + '</div></div>'
+    + '<div class="detail-section"><div class="detail-label">Produit</div><div style="font-size:12px;color:var(--text-secondary)">' + o.product + '</div><div style="font-size:14px;font-weight:500;color:#7F77DD;margin-top:4px">' + fmtPrice(o.amount) + '</div></div>'
+    + '<div class="detail-section"><div class="detail-label">Statut</div><select class="field-input"><option ' + (o.status==='new'?'selected':'') + '>Nouveau</option><option ' + (o.status==='prog'?'selected':'') + '>En cours</option><option ' + (o.status==='done'?'selected':'') + '>Livre</option><option ' + (o.status==='cancel'?'selected':'') + '>Annule</option></select></div>';
+  document.getElementById('orderDetailPanel').classList.add('open');
+}
+document.getElementById('ordersTabs').addEventListener('click', function(e) {
+  var t = e.target.closest('.tab'); if (!t) return;
+  document.querySelectorAll('#ordersTabs .tab').forEach(function(x) { x.classList.remove('active'); });
+  t.classList.add('active'); orderFilter = t.dataset.s; renderOrders();
+});
+document.getElementById('ordersSearch').addEventListener('input', renderOrders);
+renderOrders();
+
+// ---- CATALOGUE ----
+var products = [
+  { id:1, emoji:'👜', name:'Sac cuir noir', cat:'Accessoires', price:89, stock:12, sold:47, status:'ok', active:true, desc:'Sac en cuir veritable, format moyen.' },
+  { id:2, emoji:'⌚', name:'Montre doree', cat:'Bijoux', price:145, stock:3, sold:29, status:'low', active:true, desc:'Montre analogique plaquee or.' },
+  { id:3, emoji:'👟', name:'Sneakers blanches', cat:'Chaussures', price:72, stock:8, sold:63, status:'ok', active:true, desc:'Sneakers unisexe en mesh respirant.' },
+  { id:4, emoji:'🌸', name:'Parfum XL 100ml', cat:'Beaute', price:58, stock:0, sold:18, status:'out', active:false, desc:'Eau de parfum florale, tenue 8h.' },
+  { id:5, emoji:'🏃', name:'Ensemble sport', cat:'Vetements', price:94, stock:4, sold:22, status:'low', active:true, desc:'Veste + pantalon leger anti-transpiration.' },
+  { id:6, emoji:'🧢', name:'Casquette logo', cat:'Accessoires', price:29, stock:15, sold:84, status:'ok', active:true, desc:'Casquette snapback 6 panneaux.' },
+  { id:7, emoji:'💍', name:'Bracelet argent', cat:'Bijoux', price:39, stock:0, sold:11, status:'out', active:false, desc:'Bracelet chaine argent 925.' },
+  { id:8, emoji:'👔', name:'Chemise oversize', cat:'Vetements', price:55, stock:9, sold:37, status:'ok', active:true, desc:'Chemise coupe oversize, 100% coton.' },
+  { id:9, emoji:'🕶️', name:'Lunettes soleil', cat:'Accessoires', price:34, stock:2, sold:19, status:'low', active:true, desc:'Monture acetate, verres polarises UV400.' }
+];
+var skMap = { ok:{l:'En stock',c:'sk-ok'}, low:{l:'Stock faible',c:'sk-low'}, out:{l:'Rupture',c:'sk-out'} };
+var catFilter = 'all';
+function updateKpis() {
+  document.getElementById('kpiTotal').textContent = products.length;
+  document.getElementById('kpiOk').textContent = products.filter(function(p) { return p.status === 'ok'; }).length;
+  document.getElementById('kpiLow').textContent = products.filter(function(p) { return p.status === 'low'; }).length;
+  document.getElementById('kpiOut').textContent = products.filter(function(p) { return p.status === 'out'; }).length;
+}
+function renderCatalog() {
+  var q = document.getElementById('catSearch').value.toLowerCase();
+  var filtered = products.filter(function(p) {
+    return (catFilter === 'all' || p.status === catFilter) && (!q || p.name.toLowerCase().indexOf(q) >= 0 || p.cat.toLowerCase().indexOf(q) >= 0);
+  });
+  document.getElementById('catalogGrid').innerHTML = '<div class="products-grid">' + filtered.map(function(p) {
+    var s = skMap[p.status];
+    return '<div class="product-card" onclick="openCatDetail(' + p.id + ')">'
+      + '<div class="product-img">' + p.emoji + '</div>'
+      + '<div class="product-body">'
+      + '<div style="font-size:12px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + p.name + '</div>'
+      + '<div style="font-size:10px;color:var(--text-secondary);margin-bottom:4px">' + p.cat + '</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="font-size:14px;font-weight:500;color:#7F77DD">' + fmtPrice(p.price) + '</div>'
+      + '<span class="stock-badge ' + s.c + '">' + (p.status === 'ok' ? p.stock + ' en stock' : s.l) + '</span>'
+      + '</div>'
+      + '<div style="display:flex;justify-content:space-between;margin-top:6px">'
+      + '<span style="font-size:10px;color:var(--text-secondary)">' + p.sold + ' vendus</span>'
+      + '<span style="font-size:10px;color:' + (p.active ? 'var(--green)' : 'var(--text-secondary)') + '">' + (p.active ? '● Actif' : '● Inactif') + '</span>'
+      + '</div></div></div>';
+  }).join('') + '</div>';
+}
+function openCatDetail(id) {
+  var p = products.find(function(x) { return x.id === id; });
+  document.getElementById('catDetailTitle').textContent = p.name;
+  document.getElementById('catDetailBody').innerHTML = '<div style="text-align:center;padding:1rem 0;background:var(--content-bg);border-radius:8px;margin-bottom:1rem;font-size:42px">' + p.emoji + '</div>'
+    + '<div style="margin-bottom:8px"><div class="field-label">Nom</div><input class="field-input" value="' + p.name + '"/></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    + '<div><div class="field-label">Prix</div><input class="field-input" type="number" value="' + p.price + '"/></div>'
+    + '<div><div class="field-label">Stock</div><input class="field-input" type="number" value="' + p.stock + '"/></div></div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:0.5px solid var(--card-border)">'
+    + '<div><div class="toggle-name">Produit actif</div><div class="toggle-desc">L IA peut proposer ce produit</div></div>'
+    + '<button class="switch ' + (p.active ? 'on' : '') + '" onclick="this.classList.toggle(\'on\')"></button></div>';
+  document.getElementById('catDetailPanel').classList.add('open');
+}
+document.getElementById('catTabs').addEventListener('click', function(e) {
+  var t = e.target.closest('.tab'); if (!t) return;
+  document.querySelectorAll('#catTabs .tab').forEach(function(x) { x.classList.remove('active'); });
+  t.classList.add('active'); catFilter = t.dataset.s; renderCatalog();
+});
+document.getElementById('catSearch').addEventListener('input', renderCatalog);
+renderCatalog();
+updateKpis();
+
+// ---- AJOUTER PRODUIT ----
+function closeAddModal() { document.getElementById('addProductModal').style.display = 'none'; }
+function saveNewProduct() {
+  var name = document.getElementById('newName').value.trim();
+  var price = parseFloat(document.getElementById('newPrice').value);
+  var stock = parseInt(document.getElementById('newStock').value);
+  var err = document.getElementById('newProductError');
+  if (!name) { err.textContent = 'Le nom est obligatoire.'; return; }
+  if (isNaN(price) || price < 0) { err.textContent = 'Prix invalide.'; return; }
+  if (isNaN(stock) || stock < 0) { err.textContent = 'Stock invalide.'; return; }
+  var status = stock === 0 ? 'out' : stock <= 4 ? 'low' : 'ok';
+  products.unshift({ id: Date.now(), emoji: document.getElementById('newEmoji').value || '📦', name: name, cat: document.getElementById('newCat').value.trim() || 'Divers', price: price, stock: stock, sold: 0, status: status, active: document.getElementById('newActive').classList.contains('on'), desc: document.getElementById('newDesc').value.trim() });
+  closeAddModal(); renderCatalog(); updateKpis();
+}
+document.getElementById('addProductBtn').addEventListener('click', function() {
+  document.getElementById('newName').value = '';
+  document.getElementById('newEmoji').value = '📦';
+  document.getElementById('newDesc').value = '';
+  document.getElementById('newCat').value = '';
+  document.getElementById('newPrice').value = '';
+  document.getElementById('newStock').value = '';
+  document.getElementById('newProductError').textContent = '';
+  document.getElementById('newActive').classList.add('on');
+  document.getElementById('addProductModal').style.display = 'flex';
+});
+document.getElementById('addProductModal').addEventListener('click', function(e) { if (e.target === e.currentTarget) closeAddModal(); });
+
+// ---- IMPORT CSV ----
+var importedProducts = [];
+function closeImportModal() { document.getElementById('importModal').style.display = 'none'; }
+document.getElementById('importProductBtn').addEventListener('click', function() {
+  importedProducts = [];
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('confirmImportBtn').style.display = 'none';
+  document.getElementById('importError').textContent = '';
+  document.getElementById('csvFileInput').value = '';
+  document.getElementById('importModal').style.display = 'flex';
+});
+document.getElementById('importModal').addEventListener('click', function(e) { if (e.target === e.currentTarget) closeImportModal(); });
+document.getElementById('csvFileInput').addEventListener('change', function() {
+  var file = this.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var lines = e.target.result.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    if (lines.length < 2) { document.getElementById('importError').textContent = 'Fichier vide ou format invalide.'; return; }
+    importedProducts = [];
+    var errs = [];
+    lines.slice(1).forEach(function(line, i) {
+      var cols = line.split(',').map(function(c) { return c.trim(); });
+      if (cols.length < 3) { errs.push('Ligne ' + (i+2) + ' ignoree'); return; }
+      var name = cols[0], cat = cols[1] || 'Divers', price = parseFloat(cols[2]), stock = parseInt(cols[3]) || 0, desc = cols[4] || '';
+      if (!name || isNaN(price)) { errs.push('Ligne ' + (i+2) + ' invalide'); return; }
+      importedProducts.push({ id: Date.now()+i, emoji:'📦', name:name, cat:cat, price:price, stock:stock, sold:0, status:stock===0?'out':stock<=4?'low':'ok', active:true, desc:desc });
+    });
+    document.getElementById('importError').textContent = errs.length ? errs.join(' · ') : '';
+    if (importedProducts.length > 0) {
+      document.getElementById('importCount').textContent = importedProducts.length + ' produit(s) detecte(s)';
+      document.getElementById('importPreviewList').innerHTML = importedProducts.slice(0,5).map(function(p) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:var(--content-bg);border-radius:5px;font-size:11px"><span style="color:var(--text-primary);font-weight:500">' + p.name + '</span><span style="color:var(--text-secondary)">' + p.cat + ' · ' + fmtPrice(p.price) + '</span></div>';
+      }).join('') + (importedProducts.length > 5 ? '<div style="font-size:10px;color:var(--text-secondary);text-align:center;padding:4px">...et ' + (importedProducts.length-5) + ' autre(s)</div>' : '');
+      document.getElementById('importPreview').style.display = 'block';
+      document.getElementById('confirmImportBtn').style.display = 'flex';
+    }
+  };
+  reader.readAsText(file);
+});
+function confirmImport() {
+  products = importedProducts.concat(products);
+  closeImportModal(); renderCatalog(); updateKpis(); importedProducts = [];
+}
+
+// ---- ANALYTICS ----
+var analyticsInited = false;
+function renderTopProducts() {
+  var top = products.slice().sort(function(a,b) { return b.sold-a.sold; }).slice(0,3);
+  var el = document.getElementById('topProductsBody');
+  if (!el) return;
+  el.innerHTML = top.map(function(p) {
+    return '<tr><td>' + p.name + '</td><td>' + p.sold + '</td><td style="font-weight:500;color:#7F77DD">' + fmtPrice(p.price * p.sold) + '</td></tr>';
+  }).join('');
+}
+function initAnalyticsCharts() {
+  if (analyticsInited) return; analyticsInited = true;
+  new Chart(document.getElementById('analyticsChart').getContext('2d'), {
+    type:'line', data:{ labels:['1','5','10','15','20','25','30'], datasets:[{ data:[580,820,740,1050,890,1240,980], borderColor:'#7F77DD', backgroundColor:'rgba(127,119,221,0.1)', borderWidth:2, fill:true, tension:0.4, pointRadius:3, pointBackgroundColor:'#7F77DD' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#6b6b7b',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}}, y:{ticks:{color:'#6b6b7b',font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}} } }
+  });
+  new Chart(document.getElementById('platformChart').getContext('2d'), {
+    type:'doughnut', data:{ labels:['Instagram','WhatsApp','TikTok','Facebook'], datasets:[{ data:[38,29,22,11], backgroundColor:['#E1306C','#25D366','#010101','#1877F2'], borderWidth:0 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{font:{size:11},padding:10}} } }
+  });
+  renderTopProducts();
+}
+
+// ---- CONFIG IA ----
+function selectTone(el) {
+  document.querySelectorAll('.tone-card').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+
+// ---- SETTINGS NAV ----
+var sections = ['profil','securite','notifs','boutique','abo','equipe','danger'];
+document.getElementById('settingsNav').addEventListener('click', function(e) {
+  var item = e.target.closest('.settings-nav-item'); if (!item || !item.dataset.sec) return;
+  document.querySelectorAll('.settings-nav-item').forEach(function(i) { i.classList.remove('active'); });
+  item.classList.add('active');
+  sections.forEach(function(s) { document.getElementById('sec-'+s).style.display = item.dataset.sec === s ? '' : 'none'; });
+});
+
+// ---- DEVISE CHANGE ----
+document.getElementById('deviseSelect').addEventListener('change', function() {
+  currentDevise = this.value;
+  applyDevise();
+  renderOrders();
+});
+
+// ---- IA TOGGLE ----
+var iaActive = true;
+document.getElementById('iaToggle').addEventListener('click', function() {
+  iaActive = !iaActive;
+  this.classList.toggle('on', iaActive);
+  var lbl = document.getElementById('iaStatusLabel');
+  var dot = document.getElementById('iaDot');
+  var txt = document.getElementById('iaStatusText');
+  lbl.innerHTML = iaActive ? '<span style="color:var(--green)">● IA active</span>' : '<span style="color:var(--red)">● IA desactivee</span>';
+  dot.style.background = iaActive ? 'var(--green)' : 'var(--red)';
+  txt.textContent = iaActive ? 'IA active' : 'IA desactivee';
+  txt.style.color = iaActive ? 'var(--green)' : 'var(--red)';
+});
+</script>
+</body>
+</html>
