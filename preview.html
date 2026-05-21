@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SellBot V2.1 — AI Sales Operating System</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.19.0/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#07070b;
+  --panel:rgba(16,16,24,.86);
+  --panel-solid:#101018;
+  --panel-2:#171722;
+  --border:rgba(255,255,255,.08);
+  --text:#f7f8ff;
+  --muted:#8d92b3;
+  --soft:#c8cdf0;
+  --purple:#8B7CFF;
+  --purple-2:#A99EFF;
+  --purple-glow:rgba(139,124,255,.45);
+  --green:#1FD286;
+  --green-glow:rgba(31,210,134,.35);
+  --orange:#FFB347;
+  --red:#FF5B67;
+  --blue:#4EA8FF;
+  --shadow:0 30px 90px rgba(0,0,0,.42);
+}
+
+body.light{
+  --bg:#edf1ff;
+  --panel:rgba(255,255,255,.9);
+  --panel-solid:#fff;
+  --panel-2:#f4f6ff;
+  --border:rgba(12,17,35,.09);
+  --text:#12131a;
+  --muted:#65708f;
+  --soft:#34394d;
+  --purple:#7467ef;
+  --purple-2:#8B7CFF;
+  --purple-glow:rgba(116,103,239,.25);
+  --green:#0BA66B;
+  --green-glow:rgba(11,166,107,.18);
+  --orange:#C77713;
+  --red:#D33D4A;
+  --blue:#287EDB;
+  --shadow:0 30px 80px rgba(87,103,160,.22);
+}
+
+body{
+  min-height:100vh;
+  overflow:hidden;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 18% -10%,rgba(139,124,255,.28),transparent 36%),
+    radial-gradient(circle at 85% 10%,rgba(78,168,255,.16),transparent 34%),
+    radial-gradient(circle at 60% 110%,rgba(31,210,134,.11),transparent 36%),
+    var(--bg);
+  transition:background .35s ease,color .35s ease;
+}
+
+.bg-grid{
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:42px 42px;
+  mask-image:radial-gradient(circle at center,black 20%,transparent 80%);
+  pointer-events:none;
+}
+
+.orb{
+  position:fixed;
+  width:420px;
+  height:420px;
+  border-radius:50%;
+  background:radial-gradient(circle,var(--purple-glow),transparent 68%);
+  filter:blur(12px);
+  pointer-events:none;
+  animation:floatOrb 12s ease-in-out infinite;
+}
+
+.orb.one{left:35%;top:-220px}
+.orb.two{right:-180px;bottom:-190px;animation-delay:2s;background:radial-gradient(circle,var(--green-glow),transparent 68%)}
+
+@keyframes floatOrb{
+  0%,100%{transform:translate3d(0,0,0) scale(1)}
+  50%{transform:translate3d(28px,34px,0) scale(1.08)}
+}
+
+.app{
+  display:grid;
+  grid-template-columns:280px 1fr 365px;
+  gap:18px;
+  height:100vh;
+  padding:18px;
+  position:relative;
+  z-index:2;
+}
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:28px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(22px);
+  overflow:hidden;
+  position:relative;
+  transition:background .25s ease,border .25s ease,transform .25s ease;
+}
+
+.sidebar{
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:32px;
+}
+
+.logo-mark{
+  width:52px;
+  height:52px;
+  border-radius:17px;
+  background:linear-gradient(135deg,var(--purple),var(--purple-2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 0 35px var(--purple-glow);
+}
+
+.logo-mark i{font-size:28px;color:#fff}
+.logo h1{font-size:22px;font-weight:850;letter-spacing:-.04em}
+.logo p{font-size:12px;color:var(--muted);margin-top:2px}
+
+.nav-title{
+  color:var(--muted);
+  text-transform:uppercase;
+  font-size:11px;
+  letter-spacing:.15em;
+  margin:14px 0 10px;
+}
+
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:13px 14px;
+  border-radius:16px;
+  color:var(--soft);
+  margin-bottom:8px;
+  cursor:pointer;
+  transition:.22s ease;
+  user-select:none;
+}
+
+.nav-item i{font-size:20px}
+.nav-item:hover{background:rgba(139,124,255,.08);transform:translateX(2px)}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(139,124,255,.28),rgba(139,124,255,.07));
+  border:1px solid rgba(139,124,255,.25);
+  color:var(--text);
+}
+
+.live-card{
+  margin-top:auto;
+  padding:18px;
+  border-radius:24px;
+  background:linear-gradient(135deg,rgba(139,124,255,.18),rgba(139,124,255,.04));
+  border:1px solid rgba(139,124,255,.18);
+}
+
+.live-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 18px var(--green);
+  animation:pulse 1.4s infinite;
+}
+
+@keyframes pulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.35);opacity:.72}
+}
+
+.main{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  min-width:0;
+}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  padding:4px 6px 0;
+}
+
+.hero-title h2{
+  font-size:38px;
+  line-height:1.02;
+  font-weight:880;
+  letter-spacing:-.055em;
+}
+
+.hero-title p{
+  color:var(--muted);
+  margin-top:8px;
+}
+
+.actions{display:flex;gap:10px;align-items:center}
+
+.btn{
+  border:none;
+  border-radius:15px;
+  padding:12px 16px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.2s ease;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  white-space:nowrap;
+}
+
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{
+  background:linear-gradient(135deg,var(--purple),var(--purple-2));
+  color:#fff;
+  box-shadow:0 0 34px var(--purple-glow);
+}
+.btn-secondary{
+  color:var(--text);
+  background:rgba(255,255,255,.055);
+  border:1px solid var(--border);
+}
+
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.26fr 1fr;
+  gap:18px;
+  min-height:430px;
+  flex:1;
+}
+
+.center-panel{padding:24px;display:flex;flex-direction:column}
+.section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:20px;
+}
+.section-title h3{font-size:18px}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  color:var(--green);
+  background:rgba(31,210,134,.08);
+  border:1px solid rgba(31,210,134,.16);
+  padding:7px 10px;
+  border-radius:999px;
+}
+
+.stage{
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+
+.conversation-card{
+  border-radius:24px;
+  padding:18px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.055);
+  transition:.28s ease;
+}
+
+.conversation-card.featured{
+  border-color:rgba(139,124,255,.3);
+  background:linear-gradient(180deg,rgba(139,124,255,.13),rgba(255,255,255,.025));
+}
+
+.conv-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.avatar{
+  width:46px;height:46px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:850;
+}
+
+.conv-name{font-weight:800}
+.conv-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.platform{margin-left:auto;font-size:23px;color:var(--soft)}
+
+.bubble{
+  padding:14px 15px;
+  border-radius:18px;
+  font-size:14px;
+  line-height:1.55;
+  margin-bottom:12px;
+  background:rgba(0,0,0,.22);
+  color:var(--soft);
+}
+
+body.light .bubble{background:#f0f3ff}
+
+.ai-reply{
+  background:rgba(139,124,255,.12);
+  border:1px solid rgba(139,124,255,.18);
+  color:var(--text);
+}
+
+.brain-flow{
+  border-radius:24px;
+  padding:18px;
+  background:linear-gradient(180deg,rgba(139,124,255,.13),rgba(139,124,255,.035));
+  border:1px solid rgba(139,124,255,.16);
+}
+
+.flow-step{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:12px 0;
+  border-bottom:1px solid var(--border);
+  animation:fadeUp .5s ease both;
+}
+
+.flow-step:last-child{border-bottom:none}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.flow-icon{
+  width:36px;height:36px;border-radius:14px;
+  background:rgba(139,124,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--purple-2);
+  flex:0 0 auto;
+}
+
+.flow-content strong{display:block;font-size:14px}
+.flow-content small{display:block;color:var(--muted);margin-top:4px;line-height:1.35}
+
+.right-panel{
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.kpi{
+  padding:17px;
+  border-radius:22px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.055);
+}
+
+.kpi small{color:var(--muted)}
+.kpi h2{font-size:32px;margin-top:8px;letter-spacing:-.05em}
+.green{color:var(--green)} .red{color:var(--red)} .blue{color:var(--blue)} .orange{color:var(--orange)}
+
+.timeline{
+  flex:1;
+  padding:20px;
+  border-radius:24px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.055);
+  min-height:0;
+}
+
+.timeline h3{font-size:17px;margin-bottom:18px}
+.event{
+  position:relative;
+  padding-left:28px;
+  margin-bottom:17px;
+  opacity:.5;
+  transition:.25s ease;
+}
+
+.event.active{opacity:1}
+.event::before{
+  content:'';
+  position:absolute;
+  left:6px;top:7px;
+  width:11px;height:11px;border-radius:50%;
+  background:var(--purple);
+  box-shadow:0 0 16px var(--purple);
+}
+
+.event::after{
+  content:'';
+  position:absolute;
+  left:11px;top:20px;
+  width:1px;height:34px;
+  background:var(--border);
+}
+
+.event:last-child::after{display:none}
+.event-time{font-size:11px;color:var(--muted);margin-bottom:4px}
+.event p{font-size:14px;color:var(--soft)}
+
+.bottom-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  min-height:220px;
+}
+
+.bottom-card{padding:20px}
+
+.heat-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:16px;
+}
+
+.heat{
+  padding:16px;
+  border-radius:20px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.045);
+}
+.heat h1{font-size:32px;letter-spacing:-.05em}
+.heat p{font-size:12px;color:var(--muted);margin-top:4px}
+.hot{background:rgba(255,91,103,.11)}
+.warm{background:rgba(255,179,71,.12)}
+.cold{background:rgba(78,168,255,.11)}
+
+.chart-card{padding:20px}
+.chart-wrap{height:145px;position:relative;margin-top:8px}
+
+.copilot-box{
+  margin-top:12px;
+  padding:17px;
+  border-radius:20px;
+  background:rgba(0,0,0,.22);
+  border:1px solid var(--border);
+}
+body.light .copilot-box{background:#f1f4ff}
+
+.reply{
+  margin-top:12px;
+  padding:15px;
+  border-radius:17px;
+  line-height:1.65;
+  background:rgba(139,124,255,.12);
+  border:1px solid rgba(139,124,255,.18);
+}
+
+.reply-actions{display:flex;gap:10px;margin-top:13px}
+.reply-actions .btn{flex:1;padding:10px 12px}
+
+.hidden{display:none!important}
+
+.page-content{
+  animation:pageIn .28s ease;
+}
+
+@keyframes pageIn{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.toast-zone{
+  position:fixed;
+  right:390px;
+  top:22px;
+  width:320px;
+  z-index:20;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.toast{
+  padding:14px 15px;
+  border-radius:18px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  box-shadow:0 18px 50px rgba(0,0,0,.22);
+  animation:toastIn .35s ease, toastOut .35s ease 4.2s forwards;
+}
+
+@keyframes toastIn{
+  from{opacity:0;transform:translateY(-12px) scale(.96)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+@keyframes toastOut{
+  to{opacity:0;transform:translateY(-10px)}
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.58);
+  z-index:40;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.modal-box{
+  width:560px;
+  background:var(--panel-solid);
+  border:1px solid var(--border);
+  border-radius:30px;
+  box-shadow:0 30px 120px rgba(0,0,0,.45);
+  padding:28px;
+  animation:modalIn .35s ease;
+}
+
+@keyframes modalIn{
+  from{opacity:0;transform:scale(.94) translateY(12px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+.modal h2{font-size:31px;line-height:1.05;letter-spacing:-.05em;margin:12px 0}
+.modal p{color:var(--muted);line-height:1.7}
+
+.onboarding-steps{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+  margin:20px 0;
+}
+
+.on-step{
+  padding:13px;
+  border-radius:18px;
+  background:rgba(139,124,255,.1);
+  border:1px solid rgba(139,124,255,.15);
+}
+
+.on-step i{font-size:22px;color:var(--purple)}
+.on-step strong{display:block;margin:8px 0 4px;font-size:13px}
+.on-step small{color:var(--muted);line-height:1.4}
+
+.sale-demo{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-top:14px;
+  padding:12px;
+  border-radius:18px;
+  background:rgba(31,210,134,.08);
+  border:1px solid rgba(31,210,134,.16);
+  color:var(--green);
+  font-weight:800;
+}
+
+.progress{
+  height:8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+  margin-top:16px;
+}
+
+.progress span{
+  display:block;
+  height:100%;
+  width:0;
+  background:linear-gradient(90deg,var(--purple),var(--green));
+  animation:progress 5s infinite;
+}
+
+@keyframes progress{
+  0%{width:0}
+  20%{width:24%}
+  45%{width:52%}
+  70%{width:78%}
+  100%{width:100%}
+}
+
+.product-mini{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:16px;
+}
+.product{
+  padding:16px;
+  border-radius:20px;
+  background:rgba(255,255,255,.035);
+  border:1px solid var(--border);
+}
+.product .emoji{font-size:32px}
+.product strong{display:block;margin-top:8px}
+.product small{color:var(--muted);display:block;margin-top:4px}
+
+.table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:12px;
+  font-size:13px;
+}
+.table th,.table td{
+  padding:13px 10px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+}
+.table th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.status{
+  display:inline-flex;
+  padding:5px 9px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+}
+.status.ok{background:rgba(31,210,134,.1);color:var(--green)}
+.status.hot{background:rgba(255,91,103,.1);color:var(--red)}
+.status.warn{background:rgba(255,179,71,.12);color:var(--orange)}
+
+
+/* LOGIN SCREEN — inspired by SellBot V1, adapted to V2 cinematic style */
+.login-screen{
+  position:fixed;
+  inset:0;
+  z-index:60;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(139,124,255,.30),transparent 36%),
+    radial-gradient(circle at 88% 18%,rgba(78,168,255,.16),transparent 34%),
+    radial-gradient(circle at 60% 110%,rgba(31,210,134,.12),transparent 38%),
+    var(--bg);
+}
+
+.login-shell{
+  width:min(1060px,100%);
+  min-height:660px;
+  display:grid;
+  grid-template-columns:1.08fr .92fr;
+  border-radius:34px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  background:rgba(16,16,24,.72);
+  backdrop-filter:blur(24px);
+  box-shadow:0 40px 130px rgba(0,0,0,.55);
+  position:relative;
+}
+
+.login-left{
+  padding:46px;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  background:
+    linear-gradient(135deg,rgba(139,124,255,.24),rgba(31,210,134,.05)),
+    rgba(255,255,255,.02);
+}
+
+.login-left::before{
+  content:'';
+  position:absolute;
+  width:520px;
+  height:520px;
+  border-radius:50%;
+  background:radial-gradient(circle,var(--purple-glow),transparent 70%);
+  top:-220px;
+  right:-220px;
+  animation:floatOrb 10s ease-in-out infinite;
+}
+
+.login-brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  position:relative;
+  z-index:1;
+}
+
+.login-brand h1{
+  font-size:24px;
+  font-weight:880;
+  letter-spacing:-.04em;
+}
+
+.login-brand p{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:3px;
+}
+
+.login-hero{
+  position:relative;
+  z-index:1;
+  max-width:540px;
+}
+
+.login-hero h2{
+  font-size:48px;
+  line-height:1.02;
+  letter-spacing:-.06em;
+  margin-bottom:16px;
+}
+
+.login-hero p{
+  font-size:16px;
+  color:var(--soft);
+  line-height:1.75;
+}
+
+.login-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  position:relative;
+  z-index:1;
+}
+
+.login-metric{
+  padding:16px;
+  border-radius:20px;
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.login-metric strong{
+  display:block;
+  font-size:24px;
+  letter-spacing:-.05em;
+}
+
+.login-metric span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-top:4px;
+}
+
+.login-right{
+  padding:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.login-card-v2{
+  width:100%;
+  max-width:390px;
+  padding:28px;
+  border-radius:28px;
+  background:rgba(255,255,255,.045);
+  border:1px solid var(--border);
+  box-shadow:0 20px 70px rgba(0,0,0,.24);
+}
+
+.login-card-v2 h3{
+  font-size:25px;
+  letter-spacing:-.04em;
+  margin-bottom:8px;
+}
+
+.login-card-v2 .sub{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+  margin-bottom:24px;
+}
+
+.login-field{
+  margin-bottom:15px;
+}
+
+.login-field label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+
+.login-input-v2{
+  width:100%;
+  padding:13px 14px;
+  border-radius:15px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.20);
+  color:var(--text);
+  outline:none;
+  font:inherit;
+  transition:.2s ease;
+}
+
+body.light .login-input-v2{background:#f4f6ff}
+
+.login-input-v2:focus{
+  border-color:rgba(139,124,255,.55);
+  box-shadow:0 0 0 4px rgba(139,124,255,.12);
+}
+
+.login-input-v2.error{
+  border-color:var(--red);
+}
+
+.login-password-wrap{
+  position:relative;
+}
+
+.password-toggle{
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  border:none;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  font-size:18px;
+}
+
+.login-error{
+  min-height:18px;
+  color:var(--red);
+  font-size:12px;
+  text-align:center;
+  margin:2px 0 8px;
+}
+
+.login-demo-hint{
+  margin-top:15px;
+  padding:12px 13px;
+  border-radius:16px;
+  background:rgba(139,124,255,.10);
+  border:1px solid rgba(139,124,255,.16);
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.login-demo-hint strong{
+  color:var(--text);
+}
+
+.login-top-actions{
+  position:absolute;
+  top:22px;
+  right:22px;
+  display:flex;
+  gap:10px;
+  z-index:2;
+}
+
+body:not(.authenticated) .app{display:none}
+body.authenticated .login-screen{display:none}
+#onboarding{display:none}
+body.authenticated #onboarding{display:flex}
+body.authenticated.onboarding-closed #onboarding{display:none}
+
+@media(max-width:900px){
+  .login-shell{grid-template-columns:1fr;min-height:auto}
+  .login-left{display:none}
+  .login-right{padding:26px}
+}
+
+</style>
+</head>
+
+<body>
+<div class="bg-grid"></div>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-shell">
+    <div class="login-top-actions">
+      <button class="btn btn-secondary" id="loginThemeToggle" type="button">
+        <i class="ti ti-moon"></i>
+        Thème
+      </button>
+    </div>
+
+    <section class="login-left">
+      <div class="login-brand">
+        <div class="logo-mark"><i class="ti ti-bolt"></i></div>
+        <div>
+          <h1>SellBot</h1>
+          <p>AI Sales Operating System</p>
+        </div>
+      </div>
+
+      <div class="login-hero">
+        <h2>Connectez votre boutique. Laissez l’IA vendre.</h2>
+        <p>
+          Centralisez vos messages, détectez les clients chauds, automatisez les réponses
+          et transformez vos conversations Instagram, WhatsApp, TikTok ou Facebook en commandes.
+        </p>
+      </div>
+
+      <div class="login-metrics">
+        <div class="login-metric"><strong>96%</strong><span>réponses IA</span></div>
+        <div class="login-metric"><strong>&lt;2s</strong><span>temps moyen</span></div>
+        <div class="login-metric"><strong>+22%</strong><span>revenus simulés</span></div>
+      </div>
+    </section>
+
+    <section class="login-right">
+      <div class="login-card-v2">
+        <h3>Connexion</h3>
+        <p class="sub">Accédez au centre de contrôle commercial autonome SellBot.</p>
+
+        <form id="loginForm">
+          <div class="login-field">
+            <label for="loginUser">Nom d’utilisateur</label>
+            <input class="login-input-v2" id="loginUser" type="text" placeholder="karim diallo" autocomplete="username" />
+          </div>
+
+          <div class="login-field">
+            <label for="loginPass">Mot de passe</label>
+            <div class="login-password-wrap">
+              <input class="login-input-v2" id="loginPass" type="password" placeholder="••••" autocomplete="current-password" />
+              <button class="password-toggle" id="passToggleBtn" type="button" aria-label="Afficher le mot de passe">
+                <i class="ti ti-eye" id="passEyeIcon"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="login-error" id="loginError"></div>
+
+          <button class="btn btn-primary" type="submit" style="width:100%;padding:14px 16px">
+            <i class="ti ti-login-2"></i>
+            Se connecter
+          </button>
+        </form>
+
+        <div class="login-demo-hint">
+          Identifiants démo : <strong>karim diallo</strong> / <strong>1234</strong>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="orb one"></div>
+<div class="orb two"></div>
+<div class="toast-zone" id="toastZone"></div>
+
+<div class="modal" id="onboarding">
+  <div class="modal-box">
+    <div class="logo-mark"><i class="ti ti-bolt"></i></div>
+    <h2>Bienvenue dans le centre de vente autonome SellBot.</h2>
+    <p>
+      Cette démo simule une plateforme d’automatisation commerciale complète :
+      l’IA analyse les messages, détecte les intentions, répond, relance,
+      crée les commandes et met à jour les indicateurs en temps réel.
+    </p>
+
+    <div class="onboarding-steps">
+      <div class="on-step">
+        <i class="ti ti-message-2"></i>
+        <strong>1. Message client</strong>
+        <small>SellBot capte les demandes depuis les réseaux sociaux.</small>
+      </div>
+      <div class="on-step">
+        <i class="ti ti-brain"></i>
+        <strong>2. Analyse IA</strong>
+        <small>L’intention commerciale est détectée automatiquement.</small>
+      </div>
+      <div class="on-step">
+        <i class="ti ti-shopping-cart"></i>
+        <strong>3. Commande</strong>
+        <small>La conversation devient une commande exploitable.</small>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="closeOnboarding()" style="width:100%">
+      <i class="ti ti-player-play"></i>
+      Lancer la démonstration live
+    </button>
+  </div>
+</div>
+
+<div class="app">
+
+  <aside class="panel sidebar">
+    <div class="logo">
+      <div class="logo-mark"><i class="ti ti-bolt"></i></div>
+      <div>
+        <h1>SellBot</h1>
+        <p>AI Sales Operating System</p>
+      </div>
+    </div>
+
+    <div class="nav-title">Centre de contrôle</div>
+
+    <div class="nav-item active" data-view="live">
+      <i class="ti ti-sparkles"></i>
+      Démo Live
+    </div>
+
+    <div class="nav-item" data-view="conversations">
+      <i class="ti ti-message"></i>
+      Conversations
+    </div>
+
+    <div class="nav-item" data-view="leads">
+      <i class="ti ti-users"></i>
+      Leads
+    </div>
+
+    <div class="nav-item" data-view="orders">
+      <i class="ti ti-shopping-cart"></i>
+      Auto Orders
+    </div>
+
+    <div class="nav-item" data-view="analytics">
+      <i class="ti ti-chart-bar"></i>
+      Analytics
+    </div>
+
+    <div class="nav-item" data-view="brain">
+      <i class="ti ti-robot"></i>
+      AI Brain
+    </div>
+
+    <div class="live-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div class="live-dot"></div>
+        <strong>LIVE MODE ACTIVE</strong>
+      </div>
+      <div style="font-size:14px;color:var(--soft);line-height:1.7">
+        SellBot traite <strong id="liveCount">24</strong> conversations et convertit les leads automatiquement.
+      </div>
+      <div class="progress"><span></span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <div class="hero-title">
+        <h2 id="pageTitle">L’IA est en train de vendre.</h2>
+        <p id="pageSubtitle">Analyse des intentions · Réponses automatiques · Conversion en temps réel</p>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary" id="themeToggle">
+          <i class="ti ti-moon"></i>
+          Thème
+        </button>
+        <button class="btn btn-secondary" onclick="restartDemo()">
+          <i class="ti ti-refresh"></i>
+          Relancer démo
+        </button>
+        <button class="btn btn-primary" onclick="simulateSale()">
+          <i class="ti ti-bolt"></i>
+          Simuler une vente
+        </button>
+      </div>
+    </div>
+
+    <div id="liveView" class="page-content">
+      <div class="hero-grid">
+        <section class="panel center-panel">
+          <div class="section-title">
+            <h3>Vente automatisée en direct</h3>
+            <div class="badge"><div class="live-dot"></div> IA ACTIVE</div>
+          </div>
+
+          <div class="stage">
+            <div class="conversation-card featured">
+              <div class="conv-head">
+                <div class="avatar" style="background:rgba(225,48,108,.15);color:#ff73ab">NM</div>
+                <div>
+                  <div class="conv-name">Nora Mansouri</div>
+                  <div class="conv-sub">Instagram · cliente chaude · 82%</div>
+                </div>
+                <div class="platform"><i class="ti ti-brand-instagram"></i></div>
+              </div>
+
+              <div class="bubble">« Bonjour 😄 Vous avez encore le sac beige premium ? »</div>
+              <div class="bubble ai-reply" id="liveReply">
+                Oui 😄 Il reste encore 3 pièces actuellement. Je peux vous le réserver immédiatement avant rupture.
+              </div>
+
+              <div class="sale-demo" id="saleStatus">
+                <i class="ti ti-loader"></i>
+                Analyse IA en cours...
+              </div>
+            </div>
+
+            <div class="brain-flow" id="brainFlow">
+              <div class="flow-step">
+                <div class="flow-icon"><i class="ti ti-target-arrow"></i></div>
+                <div class="flow-content">
+                  <strong>Intention détectée : achat chaud</strong>
+                  <small>Le client demande un produit précis avec une intention d’achat immédiate.</small>
+                </div>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon"><i class="ti ti-package"></i></div>
+                <div class="flow-content">
+                  <strong>Stock vérifié : 3 restants</strong>
+                  <small>SellBot applique une urgence douce sans pression excessive.</small>
+                </div>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon"><i class="ti ti-message-bolt"></i></div>
+                <div class="flow-content">
+                  <strong>Réponse générée</strong>
+                  <small>Ton premium, naturel, rassurant et orienté conversion.</small>
+                </div>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon"><i class="ti ti-shopping-cart-check"></i></div>
+                <div class="flow-content">
+                  <strong>Précommande créée</strong>
+                  <small>Le panier est préparé automatiquement pour validation.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel right-panel">
+          <div class="kpi-grid">
+            <div class="kpi">
+              <small>Revenus aujourd’hui</small>
+              <h2 id="kpiRevenue">4 280€</h2>
+              <div class="green">+22%</div>
+            </div>
+
+            <div class="kpi">
+              <small>Réponses IA</small>
+              <h2 id="kpiAi">96%</h2>
+              <div class="blue">Instantané</div>
+            </div>
+
+            <div class="kpi">
+              <small>Clients chauds</small>
+              <h2 class="red" id="kpiHot">12</h2>
+              <div>Prioritaires</div>
+            </div>
+
+            <div class="kpi">
+              <small>Temps moyen</small>
+              <h2>&lt;2s</h2>
+              <div class="green">Ultra rapide</div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <h3>Timeline IA</h3>
+            <div class="event active"><div class="event-time">10:42</div><p>Message Instagram détecté</p></div>
+            <div class="event"><div class="event-time">10:42</div><p>Intention « Achat chaud » identifiée</p></div>
+            <div class="event"><div class="event-time">10:43</div><p>Stock vérifié automatiquement</p></div>
+            <div class="event"><div class="event-time">10:43</div><p>Réponse persuasive envoyée</p></div>
+            <div class="event"><div class="event-time">10:44</div><p>Précommande créée</p></div>
+            <div class="event"><div class="event-time">10:45</div><p>Stock mis à jour</p></div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="bottom-grid" style="margin-top:18px">
+        <section class="panel bottom-card">
+          <div class="section-title">
+            <h3>Heatmap commerciale</h3>
+            <span style="color:var(--muted);font-size:13px">Priorisation en temps réel</span>
+          </div>
+
+          <div class="heat-grid">
+            <div class="heat hot"><div style="font-size:38px">🔥</div><h1 id="hotCount">12</h1><p>Clients chauds</p></div>
+            <div class="heat warm"><div style="font-size:38px">🟠</div><h1 id="warmCount">31</h1><p>Hésitants</p></div>
+            <div class="heat cold"><div style="font-size:38px">❄️</div><h1 id="coldCount">44</h1><p>Froids</p></div>
+          </div>
+        </section>
+
+        <section class="panel bottom-card">
+          <div class="section-title">
+            <h3>Mode Copilot IA</h3>
+            <span class="green" style="font-size:13px">Suggestion intelligente</span>
+          </div>
+
+          <div class="copilot-box">
+            <div style="font-size:13px;color:var(--muted)">Réponse proposée par SellBot</div>
+            <div class="reply">
+              Oui 😄 Il reste encore 3 pièces actuellement. Je peux vous le réserver immédiatement avant rupture. Livraison expédiée aujourd’hui si validation maintenant.
+            </div>
+            <div class="reply-actions">
+              <button class="btn btn-secondary">Modifier</button>
+              <button class="btn btn-primary" onclick="showToast('Réponse envoyée', 'SellBot a répondu au client automatiquement.')">Envoyer</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="conversationsView" class="page-content hidden">
+      <section class="panel center-panel" style="min-height:690px">
+        <div class="section-title">
+          <h3>Inbox unifiée multi-plateformes</h3>
+          <div class="badge"><div class="live-dot"></div> 24 conversations actives</div>
+        </div>
+
+        <table class="table">
+          <thead><tr><th>Client</th><th>Plateforme</th><th>Message</th><th>Intention</th><th>Action IA</th></tr></thead>
+          <tbody>
+            <tr><td>Nora Mansouri</td><td>Instagram</td><td>Sac beige disponible ?</td><td><span class="status hot">Chaud</span></td><td>Réservation proposée</td></tr>
+            <tr><td>Mehdi Rahmani</td><td>WhatsApp</td><td>Livraison Maroc ?</td><td><span class="status warn">Hésitant</span></td><td>Réassurance logistique</td></tr>
+            <tr><td>Sofia Kouamé</td><td>TikTok</td><td>Il reste du M ?</td><td><span class="status hot">Chaud</span></td><td>Stock vérifié</td></tr>
+            <tr><td>Amir Benali</td><td>Facebook</td><td>Prix final ?</td><td><span class="status warn">Hésitant</span></td><td>Offre limitée envoyée</td></tr>
+            <tr><td>Lina Traoré</td><td>Instagram</td><td>Je regarde juste</td><td><span class="status ok">Froid</span></td><td>Découverte besoin</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div id="leadsView" class="page-content hidden">
+      <section class="panel center-panel" style="min-height:690px">
+        <div class="section-title">
+          <h3>Leads priorisés automatiquement</h3>
+          <div class="badge">Score commercial IA</div>
+        </div>
+
+        <div class="heat-grid">
+          <div class="heat hot"><div style="font-size:44px">🔥</div><h1>12</h1><p>À traiter maintenant</p></div>
+          <div class="heat warm"><div style="font-size:44px">🟠</div><h1>31</h1><p>À relancer</p></div>
+          <div class="heat cold"><div style="font-size:44px">❄️</div><h1>44</h1><p>À nourrir</p></div>
+        </div>
+
+        <table class="table">
+          <thead><tr><th>Lead</th><th>Produit</th><th>Score</th><th>Frein</th><th>Prochaine action</th></tr></thead>
+          <tbody>
+            <tr><td>Nora</td><td>Sac beige premium</td><td>82%</td><td>Disponibilité</td><td>Réserver produit</td></tr>
+            <tr><td>Sofia</td><td>Robe satin M</td><td>78%</td><td>Taille</td><td>Confirmer stock</td></tr>
+            <tr><td>Amir</td><td>Montre dorée</td><td>61%</td><td>Prix</td><td>Offre limitée</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div id="ordersView" class="page-content hidden">
+      <section class="panel center-panel" style="min-height:690px">
+        <div class="section-title">
+          <h3>Commandes générées automatiquement</h3>
+          <button class="btn btn-primary" onclick="simulateSale()"><i class="ti ti-plus"></i>Créer via IA</button>
+        </div>
+
+        <table class="table">
+          <thead><tr><th>Commande</th><th>Client</th><th>Produit</th><th>Montant</th><th>Statut</th></tr></thead>
+          <tbody id="ordersBody">
+            <tr><td>#SB-1047</td><td>Nora Mansouri</td><td>Sac beige premium</td><td>89€</td><td><span class="status ok">Créée</span></td></tr>
+            <tr><td>#SB-1046</td><td>Mehdi Rahmani</td><td>Sneakers blanches</td><td>72€</td><td><span class="status warn">En attente</span></td></tr>
+            <tr><td>#SB-1045</td><td>Sofia Kouamé</td><td>Robe satin</td><td>119€</td><td><span class="status ok">Payée</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div id="analyticsView" class="page-content hidden">
+      <div class="bottom-grid">
+        <section class="panel chart-card">
+          <div class="section-title"><h3>Revenus live</h3><span class="green">+22%</span></div>
+          <div class="chart-wrap"><canvas id="revenueChart"></canvas></div>
+        </section>
+
+        <section class="panel chart-card">
+          <div class="section-title"><h3>Conversions par plateforme</h3><span class="blue">Multi-canal</span></div>
+          <div class="chart-wrap"><canvas id="platformChart"></canvas></div>
+        </section>
+      </div>
+
+      <section class="panel center-panel" style="margin-top:18px;min-height:430px">
+        <div class="section-title"><h3>Performance IA</h3><div class="badge">Optimisation continue</div></div>
+        <table class="table">
+          <thead><tr><th>Indicateur</th><th>Valeur</th><th>Évolution</th><th>Interprétation</th></tr></thead>
+          <tbody>
+            <tr><td>Taux de closing IA</td><td>68%</td><td class="green">+9 pts</td><td>Scripts efficaces sur leads chauds</td></tr>
+            <tr><td>Temps moyen réponse</td><td>&lt;2s</td><td class="green">Stable</td><td>Expérience instantanée</td></tr>
+            <tr><td>Relances converties</td><td>41%</td><td class="orange">+4 pts</td><td>Relance douce performante</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div id="brainView" class="page-content hidden">
+      <section class="panel center-panel" style="min-height:690px">
+        <div class="section-title">
+          <h3>Cerveau commercial IA</h3>
+          <div class="badge">Persuasion contrôlée</div>
+        </div>
+
+        <div class="stage">
+          <div class="brain-flow">
+            <div class="flow-step">
+              <div class="flow-icon"><i class="ti ti-brain"></i></div>
+              <div class="flow-content"><strong>Analyse intentionnelle</strong><small>Achat chaud, hésitation, objection, demande logistique ou simple curiosité.</small></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-icon"><i class="ti ti-heart-handshake"></i></div>
+              <div class="flow-content"><strong>Réassurance</strong><small>Preuves sociales, garanties, délais, stock et retours sont utilisés selon le contexte.</small></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-icon"><i class="ti ti-clock-bolt"></i></div>
+              <div class="flow-content"><strong>Urgence douce</strong><small>L’IA pousse à l’action sans donner une impression agressive ou robotique.</small></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-icon"><i class="ti ti-shopping-bag-check"></i></div>
+              <div class="flow-content"><strong>Closing automatique</strong><small>Si le client confirme, SellBot prépare la commande et met à jour les données.</small></div>
+            </div>
+          </div>
+
+          <div class="conversation-card">
+            <div class="section-title"><h3>Produits connectés</h3></div>
+            <div class="product-mini">
+              <div class="product"><div class="emoji">👜</div><strong>Sac premium</strong><small>3 restants</small></div>
+              <div class="product"><div class="emoji">👟</div><strong>Sneakers</strong><small>12 en stock</small></div>
+              <div class="product"><div class="emoji">⌚</div><strong>Montre dorée</strong><small>Stock faible</small></div>
+            </div>
+
+            <div class="copilot-box">
+              <div style="font-size:13px;color:var(--muted)">Règle IA active</div>
+              <div class="reply">Si stock inférieur à 5, mentionner la rareté avec un ton rassurant et proposer une réservation immédiate.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+
+const loginForm = document.getElementById("loginForm");
+const loginUser = document.getElementById("loginUser");
+const loginPass = document.getElementById("loginPass");
+const loginError = document.getElementById("loginError");
+const passToggleBtn = document.getElementById("passToggleBtn");
+const passEyeIcon = document.getElementById("passEyeIcon");
+const loginThemeToggle = document.getElementById("loginThemeToggle");
+
+passToggleBtn.addEventListener("click",()=>{
+  const visible = loginPass.type === "text";
+  loginPass.type = visible ? "password" : "text";
+  passEyeIcon.className = visible ? "ti ti-eye" : "ti ti-eye-off";
+});
+
+loginThemeToggle.addEventListener("click",()=>{
+  document.body.classList.toggle("light");
+});
+
+loginForm.addEventListener("submit",(e)=>{
+  e.preventDefault();
+  const user = loginUser.value.trim().toLowerCase();
+  const pass = loginPass.value.trim();
+
+  loginUser.classList.remove("error");
+  loginPass.classList.remove("error");
+  loginError.textContent = "";
+
+  if(user !== "karim diallo" || pass !== "1234"){
+    loginError.textContent = "Identifiant ou mot de passe incorrect.";
+    loginUser.classList.add("error");
+    loginPass.classList.add("error");
+    return;
+  }
+
+  document.body.classList.add("authenticated");
+  document.body.classList.remove("onboarding-closed");
+  showToast("Connexion réussie","Bienvenue dans votre centre de contrôle SellBot.");
+});
+
+const views = ["live","conversations","leads","orders","analytics","brain"];
+
+const titles = {
+  live:["L’IA est en train de vendre.","Analyse des intentions · Réponses automatiques · Conversion en temps réel"],
+  conversations:["Conversations intelligentes en temps réel","Inbox unifiée · Réponses IA · Analyse des intentions"],
+  leads:["Détection automatique des leads chauds","Segmentation comportementale · Priorisation commerciale"],
+  orders:["Commandes générées automatiquement","Paiement · Validation · Synchronisation stock"],
+  analytics:["Pilotage des performances commerciales","Revenus · Conversion · Temps de réponse IA"],
+  brain:["Le cerveau commercial de SellBot","Persuasion · Scripts · Apprentissage intelligent"]
+};
+
+document.querySelectorAll(".nav-item").forEach(item=>{
+  item.addEventListener("click",()=>{
+    const view = item.dataset.view;
+    document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active"));
+    item.classList.add("active");
+
+    views.forEach(v=>{
+      document.getElementById(v+"View").classList.toggle("hidden",v!==view);
+    });
+
+    document.getElementById("pageTitle").innerText = titles[view][0];
+    document.getElementById("pageSubtitle").innerText = titles[view][1];
+
+    if(view==="analytics"){
+      setTimeout(initCharts,120);
+    }
+  });
+});
+
+document.getElementById("themeToggle").addEventListener("click",()=>{
+  document.body.classList.toggle("light");
+  showToast("Thème modifié","Le prototype bascule entre ambiance sombre et claire.");
+});
+
+function closeOnboarding(){
+  document.body.classList.add("onboarding-closed");
+  document.getElementById("onboarding").style.display="none";
+  showToast("Démo lancée","SellBot commence à simuler une vente automatisée.");
+  restartDemo();
+}
+
+function showToast(title,msg){
+  const zone = document.getElementById("toastZone");
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerHTML = `<strong>${title}</strong><div style="color:var(--muted);font-size:13px;margin-top:4px;line-height:1.45">${msg}</div>`;
+  zone.appendChild(toast);
+  setTimeout(()=>toast.remove(),4700);
+}
+
+let revenue = 4280;
+let hot = 12;
+let live = 24;
+let orderId = 1048;
+
+function simulateSale(){
+  revenue += 89;
+  hot = Math.max(1,hot-1);
+  live += 1;
+
+  document.getElementById("kpiRevenue").innerText = revenue.toLocaleString("fr-FR")+"€";
+  document.getElementById("kpiHot").innerText = hot;
+  document.getElementById("hotCount").innerText = hot;
+  document.getElementById("liveCount").innerText = live;
+
+  document.getElementById("saleStatus").innerHTML = '<i class="ti ti-circle-check"></i> Commande créée automatiquement';
+
+  const ordersBody = document.getElementById("ordersBody");
+  if(ordersBody){
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>#SB-${orderId++}</td><td>Nora Mansouri</td><td>Sac beige premium</td><td>89€</td><td><span class="status ok">Créée IA</span></td>`;
+    ordersBody.prepend(row);
+  }
+
+  activateTimeline();
+  showToast("Nouvelle vente générée","SellBot vient de convertir un lead chaud en commande de 89€.");
+}
+
+function restartDemo(){
+  document.getElementById("saleStatus").innerHTML = '<i class="ti ti-loader"></i> Analyse IA en cours...';
+  document.querySelectorAll(".event").forEach((e,i)=>e.classList.toggle("active",i===0));
+
+  const events = document.querySelectorAll(".event");
+  events.forEach((e,i)=>{
+    setTimeout(()=>e.classList.add("active"),i*750);
+  });
+
+  setTimeout(()=> {
+    document.getElementById("saleStatus").innerHTML = '<i class="ti ti-circle-check"></i> Précommande créée automatiquement';
+    showToast("Précommande prête","Le stock, la réponse et la commande ont été synchronisés.");
+  }, 4200);
+}
+
+function activateTimeline(){
+  document.querySelectorAll(".event").forEach((e,i)=>{
+    setTimeout(()=>e.classList.add("active"),i*250);
+  });
+}
+
+let revenueChart;
+let platformChart;
+
+function initCharts(){
+  const revenueCanvas = document.getElementById("revenueChart");
+  const platformCanvas = document.getElementById("platformChart");
+
+  if(revenueCanvas && !revenueChart){
+    revenueChart = new Chart(revenueCanvas,{
+      type:"line",
+      data:{
+        labels:["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"],
+        datasets:[{
+          label:"Revenus",
+          data:[1200,1850,2300,2100,3100,3880,4280],
+          tension:.45,
+          fill:true,
+          borderWidth:3
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false}},y:{grid:{color:"rgba(255,255,255,.06)"}}}
+      }
+    });
+  }
+
+  if(platformCanvas && !platformChart){
+    platformChart = new Chart(platformCanvas,{
+      type:"doughnut",
+      data:{
+        labels:["Instagram","WhatsApp","TikTok","Facebook"],
+        datasets:[{
+          data:[44,31,18,7],
+          borderWidth:0
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{position:"bottom"}}
+      }
+    });
+  }
+}
+
+setInterval(()=>{
+  const messages = [
+    ["Lead chaud détecté","Un client vient de demander la disponibilité d’un produit."],
+    ["Relance automatique","SellBot relance un client hésitant avec un message rassurant."],
+    ["Stock vérifié","Le catalogue a été consulté automatiquement."],
+    ["Réponse envoyée","L’IA vient de répondre en moins de 2 secondes."]
+  ];
+  const pick = messages[Math.floor(Math.random()*messages.length)];
+  showToast(pick[0],pick[1]);
+}, 9000);
+
+setInterval(()=>{
+  const warm = document.getElementById("warmCount");
+  const cold = document.getElementById("coldCount");
+  if(warm) warm.innerText = 30 + Math.floor(Math.random()*5);
+  if(cold) cold.innerText = 41 + Math.floor(Math.random()*7);
+}, 5000);
+</script>
+
+</body>
+</html>
