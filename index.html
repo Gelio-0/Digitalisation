@@ -6,6 +6,199 @@
 <title>SellBot — Prototype</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.19.0/fonts/tabler-icons.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+
+// ---- DEMO LIVE ----
+var demoInited = false;
+var demoActiveClient = 'nora';
+var demoOrderReady = null;
+var demoState = { intent:false, product:false, stock:false, info:false, order:false, address:'', confirmed:false };
+var demoClients = {
+  nora:{ initials:'NM', name:'Nora Mansouri', platform:'Instagram', product:'Sac beige premium', emoji:'👜', price:89, stock:3, color:'#7F77DD', bg:'var(--accent-light)', first:'Bonjour ! Je suis intéressée par le sac beige premium.' },
+  mehdi:{ initials:'MR', name:'Mehdi Rahmani', platform:'WhatsApp', product:'Sneakers blanches', emoji:'👟', price:72, stock:8, color:'var(--green)', bg:'var(--green-light)', first:'Bonjour, je voudrais des infos sur les sneakers blanches.' },
+  sofia:{ initials:'SK', name:'Sofia Kouamé', platform:'TikTok', product:'Montre dorée', emoji:'⌚', price:145, stock:3, color:'var(--amber)', bg:'var(--amber-light)', first:'Salut, la montre dorée est encore dispo ?' }
+};
+var demoSuggestionsBase = [
+  'Bonjour, ce produit est-il disponible ?',
+  'Je veux commander',
+  'C’est combien avec la livraison ?',
+  'Voici mon adresse : 12 rue Victor Hugo, Paris',
+  'Oui je confirme la commande'
+];
+function initDemoLive() {
+  if (demoInited) return;
+  demoInited = true;
+  document.querySelectorAll('.demo-client-row').forEach(function(row) {
+    row.addEventListener('click', function() { selectDemoClient(row.dataset.demoClient); });
+  });
+  document.getElementById('demoSendBtn').addEventListener('click', sendDemoClientMessage);
+  document.getElementById('demoInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') sendDemoClientMessage(); });
+  document.getElementById('demoPushOrderBtn').addEventListener('click', pushDemoOrderToOrders);
+  selectDemoClient('nora');
+}
+function selectDemoClient(key) {
+  demoActiveClient = key;
+  document.querySelectorAll('.demo-client-row').forEach(function(r) { r.classList.toggle('active', r.dataset.demoClient === key); });
+  var c = demoClients[key];
+  document.getElementById('demoHeaderAvatar').textContent = c.initials;
+  document.getElementById('demoHeaderAvatar').style.background = c.bg;
+  document.getElementById('demoHeaderAvatar').style.color = c.color;
+  document.getElementById('demoHeaderName').textContent = c.name;
+  document.getElementById('demoHeaderMeta').textContent = c.platform + ' · vous êtes le client';
+  renderDemoProduct();
+  resetDemoConversation();
+}
+function renderDemoProduct() {
+  var c = demoClients[demoActiveClient];
+  document.getElementById('demoProductBox').innerHTML = '<div style="display:flex;align-items:center;gap:10px">'
+    + '<div style="width:42px;height:42px;border-radius:10px;background:var(--content-bg);display:flex;align-items:center;justify-content:center;font-size:24px">' + c.emoji + '</div>'
+    + '<div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text-primary)">' + c.product + '</div>'
+    + '<div style="font-size:11px;color:var(--text-secondary);margin-top:3px">' + fmtPrice(c.price) + ' · ' + c.stock + ' en stock</div></div></div>';
+}
+function resetDemoConversation() {
+  demoState = { intent:false, product:false, stock:false, info:false, order:false, address:'', confirmed:false };
+  demoOrderReady = null;
+  var c = demoClients[demoActiveClient];
+  var body = document.getElementById('demoChatBody');
+  body.innerHTML = '';
+  addDemoMessage('ai', 'Bienvenue dans la démo. Écrivez comme un client. Exemple : « Est-ce disponible ? » puis essayez de passer commande.');
+  renderDemoSuggestions(demoSuggestionsBase);
+  updateDemoProcess();
+  updateDemoOrderBox();
+}
+function renderDemoSuggestions(list) {
+  document.getElementById('demoSuggestions').innerHTML = list.map(function(t) { return '<button class="demo-suggestion" onclick="useDemoSuggestion(this)">' + t + '</button>'; }).join('');
+}
+function useDemoSuggestion(btn) {
+  document.getElementById('demoInput').value = btn.textContent;
+  sendDemoClientMessage();
+}
+function addDemoMessage(type, text) {
+  var body = document.getElementById('demoChatBody');
+  var div = document.createElement('div');
+  div.className = 'demo-msg ' + (type === 'client' ? 'client' : 'ai');
+  div.innerHTML = text.replace(/\n/g,'<br>') + '<small>' + (type === 'client' ? 'Vous, en tant que client' : 'Réponse générée par SellBot') + '</small>';
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+function sendDemoClientMessage() {
+  var input = document.getElementById('demoInput');
+  var msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addDemoMessage('client', msg);
+  var reply = generateDemoAiReply(msg);
+  updateDemoProcess();
+  updateDemoOrderBox();
+  setTimeout(function(){ addDemoMessage('ai', reply); }, 350);
+}
+function generateDemoAiReply(raw) {
+  var msg = raw.toLowerCase();
+  var c = demoClients[demoActiveClient];
+  var asksAvailability = /dispo|disponible|reste|stock|encore/.test(msg);
+  var wantsOrder = /commande|commander|prend|veux|acheter|réserver|reserver|ok pour|je le veux|je la veux/.test(msg);
+  var asksPrice = /prix|combien|tarif|livraison/.test(msg);
+  var givesAddress = /adresse|rue|avenue|boulevard|paris|lyon|marseille|dakar|abidjan|casablanca|livrer/.test(msg);
+  var confirms = /confirme|valid|valide|oui|d'accord|ok$|c'est bon/.test(msg);
+
+  demoState.intent = true;
+  demoState.product = true;
+  demoState.stock = true;
+
+  if (givesAddress) {
+    demoState.info = true;
+    demoState.address = raw.replace(/voici mon adresse\s*:?/i,'').trim();
+  }
+  if (confirms || wantsOrder) demoState.confirmed = true;
+
+  if (demoState.confirmed && demoState.info) {
+    demoState.order = true;
+    demoOrderReady = {
+      id:'#DEMO-' + Math.floor(1000 + Math.random()*9000),
+      client:c.name,
+      product:c.product,
+      amount:c.price,
+      platform:c.platform,
+      address:demoState.address || 'Adresse communiquée dans la conversation',
+      status:'Précommande créée'
+    };
+    return 'Parfait, votre commande est prête ✅\nProduit : ' + c.product + '\nMontant : ' + fmtPrice(c.price) + '\nAdresse : ' + demoOrderReady.address + '\nJe vous envoie maintenant le récapitulatif pour validation finale.';
+  }
+
+  if (wantsOrder && !demoState.info) {
+    demoState.info = false;
+    renderDemoSuggestions(['Voici mon adresse : 12 rue Victor Hugo, Paris','Oui je confirme la commande','Quel est le délai de livraison ?']);
+    return 'Très bien 😄 Je peux vous le réserver maintenant. Pour créer la commande, envoyez-moi votre adresse de livraison.';
+  }
+
+  if (asksPrice) {
+    renderDemoSuggestions(['Je veux commander','Voici mon adresse : 12 rue Victor Hugo, Paris','Oui je confirme']);
+    return 'Le prix est de ' + fmtPrice(c.price) + '. Il reste ' + c.stock + ' pièces en stock. Si vous voulez, je peux vous le réserver et préparer la commande.';
+  }
+
+  if (asksAvailability) {
+    renderDemoSuggestions(['Je veux commander','C’est combien avec la livraison ?','Voici mon adresse : 12 rue Victor Hugo, Paris']);
+    return 'Oui 😄 ' + c.product + ' est disponible. Il reste actuellement ' + c.stock + ' pièces. Je peux vous le réserver si vous souhaitez passer commande.';
+  }
+
+  if (demoState.info && !demoState.confirmed) {
+    renderDemoSuggestions(['Oui je confirme la commande','Je veux commander','C’est bon pour moi']);
+    return 'Merci, j’ai bien noté l’adresse. Confirmez-vous la commande de ' + c.product + ' à ' + fmtPrice(c.price) + ' ?';
+  }
+
+  renderDemoSuggestions(['Ce produit est-il disponible ?','Je veux commander','C’est combien ?']);
+  return 'Bien sûr, je peux vous aider. Vous souhaitez vérifier la disponibilité, le prix ou passer commande pour ' + c.product + ' ?';
+}
+function updateDemoProcess() {
+  var c = demoClients[demoActiveClient];
+  document.querySelectorAll('.demo-process-step').forEach(function(step) {
+    step.classList.toggle('done', !!demoState[step.dataset.step]);
+  });
+  document.getElementById('demoIntentText').textContent = demoState.intent ? 'Demande client analysée : intention commerciale détectée.' : 'En attente du premier message client.';
+  document.getElementById('demoProductText').textContent = demoState.product ? c.product + ' identifié depuis le contexte de la conversation.' : 'Aucun produit confirmé.';
+  document.getElementById('demoStockText').textContent = demoState.stock ? c.stock + ' pièces utilisées dans la réponse de l’IA.' : 'Le stock sera utilisé dans la réponse.';
+  document.getElementById('demoInfoText').textContent = demoState.info ? 'Adresse de livraison reçue.' : 'Adresse ou confirmation encore nécessaire.';
+  document.getElementById('demoOrderText').textContent = demoState.order ? 'Commande créée après confirmation client.' : 'Créée uniquement après confirmation.';
+  document.getElementById('demoIntentScore').textContent = demoState.order ? '95%' : demoState.confirmed ? '88%' : demoState.intent ? '72%' : '0%';
+  document.getElementById('demoOrderState').textContent = demoState.order ? 'Créée' : demoState.confirmed ? 'À compléter' : 'Aucune';
+}
+function updateDemoOrderBox() {
+  var box = document.getElementById('demoOrderBox');
+  var btn = document.getElementById('demoPushOrderBtn');
+  if (!demoOrderReady) {
+    box.classList.remove('show');
+    box.innerHTML = '';
+    btn.style.display = 'none';
+    return;
+  }
+  box.classList.add('show');
+  btn.style.display = 'flex';
+  box.innerHTML = '<div class="demo-order-line"><span>Référence</span><strong>' + demoOrderReady.id + '</strong></div>'
+    + '<div class="demo-order-line"><span>Client</span><strong>' + demoOrderReady.client + '</strong></div>'
+    + '<div class="demo-order-line"><span>Produit</span><strong>' + demoOrderReady.product + '</strong></div>'
+    + '<div class="demo-order-line"><span>Montant</span><strong>' + fmtPrice(demoOrderReady.amount) + '</strong></div>'
+    + '<div class="demo-order-line"><span>Plateforme</span><strong>' + demoOrderReady.platform + '</strong></div>'
+    + '<div class="demo-order-line"><span>Statut</span><strong>' + demoOrderReady.status + '</strong></div>';
+}
+function pushDemoOrderToOrders() {
+  if (!demoOrderReady) return;
+  var c = demoClients[demoActiveClient];
+  orders.unshift({ id:demoOrderReady.id, client:c.name, initials:c.initials, bg:c.bg, tc:c.color, product:c.product, amount:c.price, platform:c.platform.toLowerCase(), status:'new', date:'Démo', source:'ia' });
+  renderOrders();
+  document.getElementById('demoPushOrderBtn').innerHTML = '<i class="ti ti-check" style="font-size:13px"></i>Ajoutée aux commandes';
+  setTimeout(function(){ document.getElementById('demoPushOrderBtn').innerHTML = '<i class="ti ti-plus" style="font-size:13px"></i>Ajouter aux commandes'; }, 1800);
+}
+
+
+// Safety: initialise demo if it is already visible after loading.
+document.addEventListener('DOMContentLoaded', function(){
+  var demoPage = document.getElementById('page-demo');
+  if (demoPage && demoPage.classList.contains('active')) {
+    setTimeout(initDemoLive, 80);
+  }
+});
+
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f0f13;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
@@ -132,6 +325,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-header{padding:1rem 1.25rem;border-bottom:0.5px solid var(--card-border);display:flex;align-items:center;gap:8px}
 .modal-body{padding:1.25rem;display:flex;flex-direction:column;gap:10px}
 .modal-footer{padding:.875rem 1.25rem;border-top:0.5px solid var(--card-border);display:flex;gap:8px;justify-content:flex-end}
+
+/* DEMO LIVE */
+.demo-live-wrap{display:grid;grid-template-columns:260px minmax(0,1fr) 290px;gap:12px;min-height:calc(100% - 0px)}
+.demo-hero{background:linear-gradient(135deg,rgba(127,119,221,.16),rgba(29,158,117,.08));border:0.5px solid rgba(127,119,221,.22);border-radius:10px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.demo-hero h2{font-size:18px;line-height:1.2;color:var(--text-primary);font-weight:650;letter-spacing:-.02em;margin-bottom:3px}
+.demo-hero p{font-size:11px;color:var(--text-secondary);line-height:1.5}
+.demo-pill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:#7F77DD;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:600;white-space:nowrap}
+.demo-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+.demo-card{background:var(--card-bg);border:0.5px solid var(--card-border);border-radius:10px;padding:1rem;margin-bottom:12px;overflow:hidden}
+.demo-card-title{font-size:13px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:7px;margin-bottom:.85rem}
+.demo-card-title i{color:#7F77DD;font-size:16px}
+.demo-client-row{display:flex;align-items:center;gap:9px;padding:8px;border-radius:8px;background:var(--content-bg);border:0.5px solid var(--card-border);margin-bottom:8px;cursor:pointer;transition:.15s}
+.demo-client-row:hover,.demo-client-row.active{border-color:#7F77DD;background:var(--accent-light)}
+.demo-client-av{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.demo-client-name{font-size:12px;color:var(--text-primary);font-weight:600}
+.demo-client-meta{font-size:10px;color:var(--text-secondary);margin-top:2px}
+.demo-chat-card{display:flex;flex-direction:column;min-height:560px;padding:0}
+.demo-chat-head{padding:13px 15px;border-bottom:0.5px solid var(--card-border);display:flex;align-items:center;gap:10px;background:var(--card-bg)}
+.demo-chat-body{flex:1;overflow-y:auto;background:var(--content-bg);padding:15px;display:flex;flex-direction:column;gap:10px}
+.demo-msg{max-width:82%;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.55;box-shadow:0 2px 10px rgba(0,0,0,.03)}
+.demo-msg.client{align-self:flex-end;background:#7F77DD;color:#fff;border-bottom-right-radius:4px}
+.demo-msg.ai{align-self:flex-start;background:var(--card-bg);border:0.5px solid var(--card-border);color:var(--text-primary);border-bottom-left-radius:4px}
+.demo-msg small{display:block;margin-top:5px;font-size:9px;opacity:.68}
+.demo-chat-input{padding:12px;border-top:0.5px solid var(--card-border);display:flex;gap:7px;background:var(--card-bg)}
+.demo-suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-top:0.5px solid var(--card-border);background:var(--card-bg)}
+.demo-suggestion{border:0.5px solid var(--card-border);background:var(--content-bg);color:var(--text-secondary);border-radius:999px;padding:5px 9px;font-size:10px;cursor:pointer;transition:.15s}
+.demo-suggestion:hover{border-color:#7F77DD;color:#7F77DD;background:var(--accent-light)}
+.demo-process-step{display:flex;gap:9px;padding:10px 0;border-bottom:0.5px solid var(--card-border);opacity:.42;transition:.2s}
+.demo-process-step:last-child{border-bottom:none}
+.demo-process-step.done{opacity:1}
+.demo-step-icon{width:24px;height:24px;border-radius:8px;background:var(--content-bg);display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:13px;flex-shrink:0}
+.demo-process-step.done .demo-step-icon{background:var(--accent-light);color:#7F77DD}
+.demo-step-main{font-size:12px;font-weight:600;color:var(--text-primary)}
+.demo-step-sub{font-size:10px;color:var(--text-secondary);line-height:1.35;margin-top:2px}
+.demo-order-box{border-radius:9px;border:0.5px solid var(--card-border);background:var(--content-bg);padding:12px;display:none}
+.demo-order-box.show{display:block}
+.demo-order-line{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--card-border);font-size:11px;color:var(--text-secondary)}
+.demo-order-line:last-child{border-bottom:none}
+.demo-order-line strong{color:var(--text-primary);font-weight:600;text-align:right}
+.demo-mini-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.demo-mini-kpi{background:var(--content-bg);border:0.5px solid var(--card-border);border-radius:8px;padding:10px}
+.demo-mini-kpi span{font-size:10px;color:var(--text-secondary)}
+.demo-mini-kpi strong{display:block;font-size:17px;color:var(--text-primary);margin-top:3px}
+.demo-mode-note{font-size:11px;line-height:1.55;color:var(--text-secondary);background:var(--content-bg);border:0.5px solid var(--card-border);border-radius:8px;padding:10px;margin-top:8px}
+@media(max-width:1050px){.demo-live-wrap{grid-template-columns:1fr}.demo-chat-card{min-height:520px}.demo-hero{align-items:flex-start;flex-direction:column}}
+
 </style>
 </head>
 <body>
@@ -170,6 +409,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="nav-section">Principal</div>
     <div class="nav-item active" data-page="dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+    <div class="nav-item" data-page="demo"><i class="ti ti-sparkles"></i>Démo live<span class="nav-badge">Test</span></div>
     <div class="nav-item" data-page="messages"><i class="ti ti-message-dots"></i>Messages<span class="nav-badge">24</span></div>
     <div class="nav-item" data-page="commandes"><i class="ti ti-shopping-cart"></i>Commandes</div>
     <div class="nav-item" data-page="catalogue"><i class="ti ti-package"></i>Catalogue</div>
@@ -494,6 +734,84 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
 
+
+    <!-- DEMO LIVE -->
+    <div class="page" id="page-demo">
+      <div class="demo-hero">
+        <div>
+          <h2>Démo live — testez SellBot comme un vrai client</h2>
+          <p>Écrivez dans la conversation comme si vous étiez un client Instagram/WhatsApp. L’IA répond, qualifie l’intention, demande les informations utiles et crée une commande quand le client confirme.</p>
+        </div>
+        <div class="demo-pill"><span class="demo-dot"></span> Mode simulation contrôlée</div>
+      </div>
+
+      <div class="demo-live-wrap">
+        <div>
+          <div class="demo-card">
+            <div class="demo-card-title"><i class="ti ti-user-question"></i> Se faire passer pour</div>
+            <div class="demo-client-row active" data-demo-client="nora">
+              <div class="demo-client-av" style="background:var(--accent-light);color:#7F77DD">NM</div>
+              <div><div class="demo-client-name">Nora Mansouri</div><div class="demo-client-meta">Instagram · sac beige premium</div></div>
+            </div>
+            <div class="demo-client-row" data-demo-client="mehdi">
+              <div class="demo-client-av" style="background:var(--green-light);color:var(--green)">MR</div>
+              <div><div class="demo-client-name">Mehdi Rahmani</div><div class="demo-client-meta">WhatsApp · sneakers blanches</div></div>
+            </div>
+            <div class="demo-client-row" data-demo-client="sofia">
+              <div class="demo-client-av" style="background:var(--amber-light);color:var(--amber)">SK</div>
+              <div><div class="demo-client-name">Sofia Kouamé</div><div class="demo-client-meta">TikTok · montre dorée</div></div>
+            </div>
+            <div class="demo-mode-note">Cette démo ne montre pas de notifications artificielles. Chaque étape affichée est déclenchée par vos messages dans la conversation.</div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card-title"><i class="ti ti-package"></i> Produit testé</div>
+            <div id="demoProductBox"></div>
+          </div>
+        </div>
+
+        <div class="demo-card demo-chat-card">
+          <div class="demo-chat-head">
+            <div class="demo-client-av" id="demoHeaderAvatar" style="background:var(--accent-light);color:#7F77DD">NM</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary)" id="demoHeaderName">Nora Mansouri</div>
+              <div style="font-size:10px;color:var(--text-secondary)" id="demoHeaderMeta">Instagram · vous êtes le client</div>
+            </div>
+            <button class="btn-secondary" onclick="resetDemoConversation()"><i class="ti ti-refresh" style="font-size:13px"></i>Réinitialiser</button>
+          </div>
+          <div class="demo-chat-body" id="demoChatBody"></div>
+          <div class="demo-suggestions" id="demoSuggestions"></div>
+          <div class="demo-chat-input">
+            <input class="field-input" id="demoInput" placeholder="Écrivez comme un client : Est-ce disponible ? Je veux commander..."/>
+            <button class="btn-primary" id="demoSendBtn"><i class="ti ti-send" style="font-size:14px"></i>Envoyer</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="demo-card">
+            <div class="demo-card-title"><i class="ti ti-brain"></i> Ce que fait l’IA</div>
+            <div id="demoProcess">
+              <div class="demo-process-step" data-step="intent"><div class="demo-step-icon"><i class="ti ti-target-arrow"></i></div><div><div class="demo-step-main">Comprendre l’intention</div><div class="demo-step-sub" id="demoIntentText">En attente du premier message client.</div></div></div>
+              <div class="demo-process-step" data-step="product"><div class="demo-step-icon"><i class="ti ti-package"></i></div><div><div class="demo-step-main">Identifier le produit</div><div class="demo-step-sub" id="demoProductText">Aucun produit confirmé.</div></div></div>
+              <div class="demo-process-step" data-step="stock"><div class="demo-step-icon"><i class="ti ti-box"></i></div><div><div class="demo-step-main">Utiliser le stock réel</div><div class="demo-step-sub" id="demoStockText">Le stock sera utilisé dans la réponse.</div></div></div>
+              <div class="demo-process-step" data-step="info"><div class="demo-step-icon"><i class="ti ti-map-pin"></i></div><div><div class="demo-step-main">Collecter les infos utiles</div><div class="demo-step-sub" id="demoInfoText">Nom, adresse ou confirmation selon le cas.</div></div></div>
+              <div class="demo-process-step" data-step="order"><div class="demo-step-icon"><i class="ti ti-shopping-cart-check"></i></div><div><div class="demo-step-main">Créer la commande</div><div class="demo-step-sub" id="demoOrderText">Créée uniquement après confirmation.</div></div></div>
+            </div>
+          </div>
+
+          <div class="demo-card">
+            <div class="demo-card-title"><i class="ti ti-receipt"></i> Commande générée</div>
+            <div class="demo-mini-kpis">
+              <div class="demo-mini-kpi"><span>État</span><strong id="demoOrderState">Aucune</strong></div>
+              <div class="demo-mini-kpi"><span>Score intention</span><strong id="demoIntentScore">0%</strong></div>
+            </div>
+            <div class="demo-order-box" id="demoOrderBox"></div>
+            <button class="btn-primary" id="demoPushOrderBtn" style="width:100%;justify-content:center;margin-top:10px;display:none"><i class="ti ti-plus" style="font-size:13px"></i>Ajouter aux commandes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- DETAIL PANELS -->
     <div class="detail-panel" id="orderDetailPanel">
       <div class="detail-header"><i class="ti ti-receipt" style="font-size:16px;color:#7F77DD"></i><span style="font-size:13px;font-weight:500;color:var(--text-primary);flex:1" id="orderDetailTitle">Commande</span><button style="background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:16px" onclick="document.getElementById('orderDetailPanel').classList.remove('open')"><i class="ti ti-x"></i></button></div>
@@ -616,8 +934,8 @@ document.getElementById('loginPass').addEventListener('keydown', function(e) { i
 document.getElementById('loginUser').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
 
 // ---- NAVIGATION ----
-var pages = ['dashboard','messages','commandes','catalogue','analytics','clients','config','settings'];
-var pageTitles = { dashboard:'Dashboard', messages:'Messages', commandes:'Commandes', catalogue:'Catalogue produits', analytics:'Analytics', clients:'Clients', config:'Configuration IA', settings:'Parametres' };
+var pages = ['dashboard','demo','messages','commandes','catalogue','analytics','clients','config','settings'];
+var pageTitles = { dashboard:'Dashboard', demo:'Démo live', messages:'Messages', commandes:'Commandes', catalogue:'Catalogue produits', analytics:'Analytics', clients:'Clients', config:'Configuration IA', settings:'Parametres' };
 document.querySelectorAll('.nav-item[data-page]').forEach(function(item) {
   item.addEventListener('click', function() {
     pages.forEach(function(p) {
@@ -628,6 +946,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(function(item) {
     document.getElementById('orderDetailPanel').classList.remove('open');
     document.getElementById('catDetailPanel').classList.remove('open');
     if (item.dataset.page === 'analytics') setTimeout(initAnalyticsCharts, 50);
+    if (item.dataset.page === 'demo') setTimeout(initDemoLive, 50);
   });
 });
 
